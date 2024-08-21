@@ -165,13 +165,6 @@ export default {
     this.setDefaultAuthor()
   },
   methods: {
-<<<<<<< HEAD
-    setDefaultAuthor() {
-      // 初始化合并作者的显示内容为 authorA 的数据
-      this.updateMergedAuthorName(this.selectedAuthor)
-      this.updateMergedAuthorImage(this.selectedAuthor)
-      this.updateMergedAuthorASIN(this.selectedAuthor)
-      this.updateMergedAuthorDescription(this.selectedAuthor)
 
       // 如果 alias 是列表，逐一更新
       for (let index = 0; index < this.authorA.alias.length; index++) {
