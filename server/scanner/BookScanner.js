@@ -23,6 +23,7 @@ const AbsMetadataFileScanner = require('./AbsMetadataFileScanner')
 const EBookFile = require('../objects/files/EBookFile')
 
 const User = require('../models/User')
+const { generateKey } = require('crypto')
 //// kang/master
 
 /**
@@ -488,11 +489,13 @@ class BookScanner {
           const aliasAuthor = await Database.authorModel.getOldById(alias)
 
           const newNotification = {
+            notificationId: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
             time: new Date().toISOString(),
             category: 'merge',
             bookTitle: bookMetadata.title,
             author: author,
             aliasAuthor: aliasAuthor,
+            read: false,
             handled: false
           }
 

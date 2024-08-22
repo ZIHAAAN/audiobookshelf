@@ -62,17 +62,29 @@ class NotificationController {
   }
   async getNotifications(req, res) {
     const dbUser = await Database.userModel.getUserById(req.user.id)
-    //console.log(req.user)
     res.json(dbUser.notifications)
-    //console.log(dbUser.notifications)
-    // 输出日志，确认是否接收到了参数
-    console.log('Received clearNotifications:', req.query.clearNotifications)
-    if (req.query.clearNotifications) {
+    if (req.query.isRead) {
       dbUser.notifications = dbUser.notifications.map((notification) => ({
         ...notification,
-        handled: true
+        read: true
       }))
       await Database.userModel.updateFromOld(dbUser)
+    }
+  }
+  async clearNotifications(req, res) {
+    try {
+      const dbUser = await Database.userModel.getUserById(req.user.id)
+      const notification = dbUser.notifications.find((notification) => notification.notificationId === req.query.notificationId)
+      // if find
+      if (notification) {
+        notification.handled = true
+      }
+      //save database
+      await dbUser.save()
+      res.sendStatus(200)
+    } catch (error) {
+      console.error('Error clearing notifications:', error)
+      res.sendStatus(500)
     }
   }
 
