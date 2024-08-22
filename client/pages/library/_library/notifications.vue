@@ -33,19 +33,89 @@ import AuthorCard from '@/components/cards/AuthorCard.vue'
 import MergeAuthorModal from '@/components/modals/MergeAuthorModal.vue'
 
 export default {
+  async asyncData({ store, redirect, params, $axios }) {
+    const token = store.getters['user/getToken']
+    const userId = params.library
+
+    console.log('params:', params) // 检查 params 是否正确传递
+    console.log('userId:', userId) // 确认 userId 是否正确
+
+    if (!token) {
+      return redirect('/login')
+    }
+
+    try {
+      // 获取通知数据
+      const notifications = await $axios.$get('/api/getNotifications', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: { userId }
+      })
+
+      // 处理通知数据，生成 authorPairs
+      const authorPairs = await Promise.all(
+        notifications.map(async (notification) => {
+          const authorA = {
+            id: notification.author.id,
+            name: notification.author.name,
+            asin: notification.author.asin,
+            description: notification.author.description,
+            imagePath: notification.author.imagePath,
+            alias: [],
+            libraryId: notification.author.libraryId,
+            is_alias_of: notification.author.is_alias_of,
+            handled: notification.handled || false
+          }
+
+          const authorB = {
+            id: notification.aliasAuthor.id,
+            name: notification.aliasAuthor.name,
+            asin: notification.aliasAuthor.asin,
+            description: notification.aliasAuthor.description,
+            imagePath: notification.aliasAuthor.imagePath,
+            alias: [],
+            libraryId: notification.aliasAuthor.libraryId,
+            is_alias_of: notification.aliasAuthor.is_alias_of,
+            handled: notification.handled || false
+          }
+
+          // 获取作者 A 的别名
+          if (!authorA.is_alias_of) {
+            authorA.alias = await $axios.$get(`/api/authors/${authorA.id}/alias`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+          }
+
+          // 获取作者 B 的别名
+          if (!authorB.is_alias_of) {
+            authorB.alias = await $axios.$get(`/api/authors/${authorB.id}/alias`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+          }
+
+          return [authorA, authorB]
+        })
+      )
+
+      return { authorPairs }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+      return { authorPairs: [] }
+    }
+  },
+
   components: {
     AuthorCard,
     MergeAuthorModal
   },
+
   data() {
     return {
-      authorPairs: [],
-      /* authorPairs: [
-        [
-          { id: 101, name: 'Author A', numBooks: 5, imagePath: null, asin: 'ASIN_A', description: 'Description A', alias: ['Alias A1', 'Alias A2'], handled: false },
-          { id: 102, name: 'Author B', numBooks: 3, imagePath: null, asin: 'ASIN_B', description: 'Description B', alias: ['Alias B1', 'Alias B2'], handled: false }
-        ]
-      ],*/
       isMergeModalVisible: false,
       selectedAuthorPair: null,
       isHovering: {},
@@ -55,6 +125,7 @@ export default {
       cardHeight: 250
     }
   },
+
   computed: {
     hasUnreadNotifications() {
       return this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
@@ -72,19 +143,19 @@ export default {
       return this.$store.getters['user/getSizeMultiplier']
     }
   },
+
   methods: {
-    async fetchAuthorPairs() {
+    async fetchAuthorPairs(clearNotifications = false) {
       try {
         const token = this.userToken
-        console.log(`------------${token}---------`)
-        console.log(`------------${this.$store.getters['user/getToken']}---------`)
 
         const response = await this.$axios.get('/api/getNotifications', {
           headers: {
             Authorization: `Bearer ${token}`
-          }
+          },
+          params: { clearNotifications }
         })
-
+        console.log('----------clearNotifications------------', clearNotifications, response)
         this.authorPairs = await Promise.all(
           response.data.map(async (notification) => {
             const authorA = {
@@ -111,12 +182,10 @@ export default {
               handled: notification.handled || false
             }
 
-            // 检查是否需要获取作者 A 的别名
             if (!authorA.is_alias_of) {
               authorA.alias = await this.fetchAuthorAlias(authorA.id)
             }
 
-            // 检查是否需要获取作者 B 的别名
             if (!authorB.is_alias_of) {
               authorB.alias = await this.fetchAuthorAlias(authorB.id)
             }
@@ -124,105 +193,113 @@ export default {
             return [authorA, authorB]
           })
         )
+
         this.updateGlobalNotificationsState()
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
     },
+
     async fetchAuthorAlias(authorId) {
       try {
         const token = this.userToken
-
-        console.log(`Fetching alias for authorId: ${authorId}`)
         const response = await this.$axios.get(`/api/authors/${authorId}/alias`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         })
-        return response.data // 返回别名数组
+        return response.data
       } catch (error) {
         console.error('Failed to fetch author alias:', error)
         return []
       }
     },
+
     editAuthor(author) {
       this.$store.commit('globals/showEditAuthorModal', author)
     },
+
     showMergeModal(authorPair) {
       this.selectedAuthorPair = authorPair
       this.isMergeModalVisible = true
     },
+
     closeMergeModal() {
       this.isMergeModalVisible = false
       this.selectedAuthorPair = null
     },
-    async handleMerge(mergedAuthor) {
-      // 处理合并后的作者逻辑
-      console.log('Merged Author:', mergedAuthor)
 
+    async handleMerge(mergedAuthor) {
       this.selectedAuthorPair.forEach((author) => {
         author.handled = true
       })
-      // 更新整个 authorPairs 数组，确保 Vue 能够检测到变化
-      this.authorPairs = [...this.authorPairs]
 
+      this.authorPairs = [...this.authorPairs]
       this.isMergeModalVisible = false
       this.updateGlobalNotificationsState()
     },
+
     markNotificationAsHandled(authorPair) {
       authorPair.forEach((author) => {
         author.handled = true
       })
-      // 更新整个 authorPairs 数组，确保 Vue 能够检测到变化
-      this.authorPairs = [...this.authorPairs]
 
+      this.authorPairs = [...this.authorPairs]
       this.updateGlobalNotificationsState()
     },
+
     async cancelNotification(authorPairToCancel) {
       this.authorPairs = this.authorPairs.filter((pair) => pair !== authorPairToCancel)
       this.updateGlobalNotificationsState()
     },
+
     updateGlobalNotificationsState() {
       const hasUnread = this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
       this.$store.commit('setHasUnreadNotifications', hasUnread)
-      this.$forceUpdate() // 强制 Vue 重新渲染
+      this.$forceUpdate()
     },
+
     mouseover(index) {
       this.$set(this.isHovering, index, true)
     },
+
     mouseleave(index) {
       this.$set(this.isHovering, index, false)
     },
+
     async searchAuthor(author) {
       this.searching = true
       const payload = {}
+
       if (author.asin) payload.asin = author.asin
       else payload.q = author.name
 
-      payload.region = 'us'
-      if (this.libraryProvider.startsWith('audible.')) {
-        payload.region = this.libraryProvider.split('.').pop() || 'us'
-      }
+      payload.region = this.libraryProvider.startsWith('audible.') ? this.libraryProvider.split('.').pop() : 'us'
 
       const response = await this.$axios.$post(`/api/authors/${author.id}/match`, payload).catch((error) => {
         console.error('Failed', error)
         return null
       })
+
       if (!response) {
         this.$toast.error(`Author ${author.name} not found`)
       } else if (response.updated) {
-        if (response.author.imagePath) this.$toast.success(`Author ${response.author.name} was updated`)
-        else this.$toast.success(`Author ${response.author.name} was updated (no image found)`)
+        this.$toast.success(`Author ${response.author.name} was updated`)
       } else {
         this.$toast.info(`No updates were made for Author ${response.author.name}`)
       }
+
       this.searching = false
     }
   },
+
   mounted() {
-    console.log('-----mounted started-------------')
-    this.fetchAuthorPairs()
+    // console.log(this)
+    // console.log('User ID:', this.user.id)
+    console.log('+++++++++++++++++++++++++=====')
+    this.fetchAuthorPairs(true)
   },
+
   beforeDestroy() {
     this.authorPairs.forEach((authorPair) => {
       this.$eventBus.$off(`searching-author-${authorPair[0].id}`, this.setSearching)

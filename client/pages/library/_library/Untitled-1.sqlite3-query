@@ -1,0 +1,44 @@
+-- database: /workspaces/audiobookshelf/config/absdatabase.sqlite
+-- Use the ▷ button in the top right corner to run the entire file.
+SELECT
+  *
+FROM
+  authors
+ORDER BY
+  `is_alias_of` ASC;
+
+INSERT INTO
+  authors (
+    id,
+    name,
+    lastFirst,
+    asin,
+    description,
+    imagePath,
+    is_alias_of,
+    createdAt,
+    updatedAt
+  )
+VALUES
+  (
+    '12345678-1234-1234-1234-1234567890ab',
+    'John Doe',
+    'Doe, John',
+    'B08QJ8X9DF',
+    'A thriller author.',
+    '/images/authors/john_doe.jpg',
+    NULL,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    '12345678-1234-1234-1234-1234567890ac',
+    'Jon Doe',
+    'Doe, Jon',
+    'B08QJ8X9DG',
+    'An author of thrillers.',
+    '/images/authors/jon_doe.jpg',
+    NULL,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  );

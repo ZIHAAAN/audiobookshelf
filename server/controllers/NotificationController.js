@@ -65,7 +65,9 @@ class NotificationController {
     //console.log(req.user)
     res.json(dbUser.notifications)
     //console.log(dbUser.notifications)
-    if (req.body.clearNotifications) {
+    // 输出日志，确认是否接收到了参数
+    console.log('Received clearNotifications:', req.query.clearNotifications)
+    if (req.query.clearNotifications) {
       dbUser.notifications = dbUser.notifications.map((notification) => ({
         ...notification,
         handled: true

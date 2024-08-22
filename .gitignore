@@ -17,6 +17,10 @@
 /ffprobe*
 /unicode*
 /new*/
+Dockerfile
+post-create.sh
+.devcontainer/
+
 
 sw.*
 .DS_STORE

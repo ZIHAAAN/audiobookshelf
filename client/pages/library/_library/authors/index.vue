@@ -5,14 +5,7 @@
       <!-- Cover size widget -->
       <widgets-cover-size-widget class="fixed right-4 z-50" :style="{ bottom: streamLibraryItem ? '181px' : '16px' }" />
       <div class="flex justify-end p-4">
-        <button
-          class="btn"
-          :class="mergeButtonClass"
-          @click="showMergeModal"
-          :disabled="selectedAuthors.length !== 2"
-        >
-          Merge
-        </button>
+        <button class="btn" :class="mergeButtonClass" @click="showMergeModal" :disabled="selectedAuthors.length !== 2">Merge</button>
       </div>
       <div class="flex flex-wrap justify-center">
         <template v-for="author in authorsSorted">
@@ -27,13 +20,7 @@
     </div>
 
     <edit-modal />
-    <merge-author-modal
-      v-if="isMergeModalVisible"
-      :authorA="selectedAuthors[0]"
-      :authorB="selectedAuthors[1]"
-      @close="closeMergeModal"
-      @merge="handleMerge"
-    />
+    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthors[0]" :authorB="selectedAuthors[1]" @close="closeMergeModal" @merge="handleMerge" />
   </div>
 </template>
 
@@ -81,7 +68,7 @@ export default {
       return this.$store.state.libraries.currentLibraryId
     },
     selectedAuthors() {
-      return this.authors.filter(author => this.selectedAuthorsMap[author.id])
+      return this.authors.filter((author) => this.selectedAuthorsMap[author.id])
     },
     mergeButtonClass() {
       return this.selectedAuthors.length === 2 ? 'btn-primary' : 'btn-disabled'
@@ -131,27 +118,27 @@ export default {
       this.authors = this.authors.filter((au) => au.id !== author.id)
     },
     editAuthor(author) {
-      this.confirmMerge(() => {
-        this.$store.commit('globals/showEditAuthorModal', author)
-      })
+      // this.confirmMerge(() => {
+      this.$store.commit('globals/showEditAuthorModal', author)
+      //   })
     },
     confirmMerge(callback) {
-      const payload = {
-        message: 'Discover similar authors xxx and xxx, do you want to merge them?',
-        type: 'yesNo',
-        callback: (confirmed) => {
-          if (confirmed) {
-            console.log('Authors merged')
-          }
-          if (typeof callback === 'function') {
-            callback()
-          }
-        }
-      }
-      this.$store.commit('globals/setConfirmPrompt', payload)
+      // const payload = {
+      //   message: 'Discover similar authors xxx and xxx, do you want to merge them?',
+      //   type: 'yesNo',
+      //   callback: (confirmed) => {
+      //     if (confirmed) {
+      //       console.log('Authors merged')
+      //     }
+      //     if (typeof callback === 'function') {
+      //       callback()
+      //     }
+      //   }
+      // }
+      // this.$store.commit('globals/setConfirmPrompt', payload)
     },
     updateSelectedAuthors() {
-      this.selectedAuthors = this.authors.filter(author => this.selectedAuthorsMap[author.id])
+      this.selectedAuthors = this.authors.filter((author) => this.selectedAuthorsMap[author.id])
     },
     showMergeModal() {
       if (this.selectedAuthors.length === 2) {

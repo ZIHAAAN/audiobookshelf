@@ -159,6 +159,11 @@ export default {
     Source() {
       return this.$store.state.Source
     },
+    // userId() {
+    //   const id = this.$store.getters['user/getUserId']
+    //   console.log('SideRail User ID:', id) // 添加这一行来检查 userId 是否获User取到
+    //   return id
+    // },
     isNotificationsPage() {
       return this.$route.name === 'library-library-notifications'
     },
@@ -285,12 +290,17 @@ export default {
         this.$store.commit('setNotifications', notifications)
         console.log('Vuex notifications:', this.$store.state.globals.notifications)
 
+        notifications.forEach((notification) => {
+          if (notification.handled === false) {
+            this.isNotification = true
+          }
+        })
         // 检查通知列表长度是否大于 0，如果是，则设置 isNotification 为 true
-        if (notifications.length > 0) {
-          this.isNotification = true
-        } else {
-          this.isNotification = false
-        }
+        // if (notifications.length > 0) {
+        //   this.isNotification = true
+        // } else {
+        //   this.isNotification = false
+        // }
         console.log('Vuex notifications:', this.$store.state.globals.notifications)
         console.log('isNotification:', this.isNotification) // 验证 isNotification 是否正确设置
       } catch (error) {
