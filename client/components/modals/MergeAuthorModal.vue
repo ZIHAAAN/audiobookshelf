@@ -307,18 +307,37 @@ export default {
     async handleAction(action) {
       if (action === 'mergeAuthors') {
         await this.mergeAuthors()
+        await this.clearNotification(this.selectedAuthorPair[0].id) // clearNotification API
       } else if (action === 'mergeAliasesToB') {
         if (!this.authorB.is_alias_of) {
           await this.makeAlias('AtoB')
+          await this.clearNotification(this.selectedAuthorPair[0].id)
         } else {
           this.$toast.error('Cannot make an alias of an author who is already an alias')
         }
       } else if (action === 'mergeAliasesToA') {
         if (!this.authorA.is_alias_of) {
           await this.makeAlias('BtoA')
+          await this.clearNotification(this.selectedAuthorPair[0].id)
         } else {
           this.$toast.error('Cannot make an alias of an author who is already an alias')
         }
+      }
+    },
+    async clearNotification(notificationId) {
+      try {
+        const token = this.userToken
+        await this.$axios.get('/api/clearNotifications', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          params: { notificationId }
+        })
+        // 移除处理过的通知
+        this.authorPairs = this.authorPairs.filter((pair) => pair[0].id !== notificationId && pair[1].id !== notificationId)
+        this.updateGlobalNotificationsState()
+      } catch (error) {
+        console.error('Failed to clear notification:', error)
       }
     },
     close() {

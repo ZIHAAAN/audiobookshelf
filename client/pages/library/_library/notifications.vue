@@ -145,7 +145,7 @@ export default {
   },
 
   methods: {
-    async fetchAuthorPairs(clearNotifications = false) {
+    async fetchAuthorPairs(isRead = false) {
       try {
         const token = this.userToken
 
@@ -153,9 +153,9 @@ export default {
           headers: {
             Authorization: `Bearer ${token}`
           },
-          params: { clearNotifications }
+          params: { isRead }
         })
-        console.log('----------clearNotifications------------', clearNotifications, response)
+        console.log('----------isRead------------', isRead, response)
         this.authorPairs = await Promise.all(
           response.data.map(async (notification) => {
             const authorA = {
@@ -235,6 +235,7 @@ export default {
       })
 
       this.authorPairs = [...this.authorPairs]
+      await this.clearNotification(this.selectedAuthorPair[0].id) // 调用清除通知的 API
       this.isMergeModalVisible = false
       this.updateGlobalNotificationsState()
     },

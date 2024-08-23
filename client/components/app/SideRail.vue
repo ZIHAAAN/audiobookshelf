@@ -291,7 +291,7 @@ export default {
         console.log('Vuex notifications:', this.$store.state.globals.notifications)
 
         notifications.forEach((notification) => {
-          if (notification.handled === false) {
+          if (!notification.isRead) {
             this.isNotification = true
           }
         })
@@ -301,8 +301,7 @@ export default {
         // } else {
         //   this.isNotification = false
         // }
-        console.log('Vuex notifications:', this.$store.state.globals.notifications)
-        console.log('isNotification:', this.isNotification) // 验证 isNotification 是否正确设置
+        console.log('---isNotification---:', this.isNotification) // 验证 isNotification 是否正确设置
       } catch (error) {
         console.error('Failed to fetch notifications:', error)
         this.isNotification = false // 在出现错误时，假设没有通知
