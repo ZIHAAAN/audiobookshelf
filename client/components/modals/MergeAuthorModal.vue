@@ -275,7 +275,7 @@ export default {
       // console.log('Merging authors')
       // console.log('Author A:', this.authorA)
       // console.log('Author B:', this.authorB)
-      //const metadata = this.metadata // 假设 metadata 是通过 props 传入的
+      //const metadata = this.metadata
       const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
       console.log("---mergeAuthors'metadata-----------", metadata)
       console.log('Notification ID:', metadata.notificationId)

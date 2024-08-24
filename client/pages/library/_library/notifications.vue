@@ -134,12 +134,12 @@ export default {
   },
 
   computed: {
-    hasUnreadNotifications() {
-      return this.authorPairs.some((pair) => {
-        const handled = pair?.metadata?.handled
-        return !handled
-      })
-    },
+    // hasUnreadNotifications() {
+    //   return this.authorPairs.some((pair) => {
+    //     const handled = pair?.metadata?.handled
+    //     return !handled
+    //   })
+    // },
     userToken() {
       return this.$store.getters['user/getToken']
     },
@@ -210,7 +210,7 @@ export default {
           })
         )
 
-        this.updateGlobalNotificationsState()
+        // this.updateGlobalNotificationsState()
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
@@ -251,14 +251,14 @@ export default {
     },
 
     async handleMerge() {
-      const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      //   const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
       this.selectedAuthorPair.metadata.handled = true
 
       this.authorPairs = [...this.authorPairs]
 
       await this.clearNotifications(localMetadata.notificationId) // 调用清除通知的 API
-      this.isMergeModalVisible = false
-      this.updateGlobalNotificationsState()
+      //this.isMergeModalVisible = false
+      // this.updateGlobalNotificationsState()
     },
 
     markNotificationAsHandled(authorPair) {
@@ -267,7 +267,7 @@ export default {
       })
 
       this.authorPairs = [...this.authorPairs]
-      this.updateGlobalNotificationsState()
+      // this.updateGlobalNotificationsState()
     },
 
     async cancelNotification(authorPairToCancel) {
