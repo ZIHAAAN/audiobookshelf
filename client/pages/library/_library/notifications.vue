@@ -5,9 +5,9 @@
 
       <p class="text-center mb-6">The following authors are detected as similar. Do you want to merge them?</p>
       <div class="grid grid-cols-1 gap-4 justify-center">
-        <div v-for="(authorPair, index) in authorPairs" :key="index" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
-          <div class="flex justify-around w-full m-3 p-5 author-container space-x-4">
-            <AuthorCard v-for="author in authorPair" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
+        <div v-for="(authorPair, index) in authorPairs" :key="index" :class="['notification', authorPair.metadata.handled ? 'read' : 'unread']" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
+          <div class="flex justify-around w-full m-3 p5 author-container space-x-4">
+            <AuthorCard v-for="author in [authorPair.authorA, authorPair.authorB]" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
           </div>
           <div class="flex justify-center space-x-4 w-full mt-4">
             <button class="btn btn-primary" @click="showMergeModal(authorPair)">Merge</button>
@@ -17,8 +17,8 @@
         </div>
       </div>
     </div>
-    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair[0]" :authorB="selectedAuthorPair[1]" @close="closeMergeModal" @merge="handleMerge" />
-    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair[0]" :authorB="selectedAuthorPair[1]" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
+    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :metadata="selectedAuthorPair.metadata" @close="closeMergeModal" @merge="handleMerge" />
+    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :metadata="selectedAuthorPair.metadata" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
   </div>
 </template>
 
@@ -28,6 +28,82 @@ import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
 import MakeAliasModal  from '@/components/modals/authors/MakeAliasModal.vue'
 
 export default {
+  async asyncData({ store, redirect, params, $axios }) {
+    const token = store.getters['user/getToken']
+    const userId = params.library
+
+    console.log('params:', params)
+    console.log('userId:', userId)
+
+    if (!token) {
+      return redirect('/login')
+    }
+
+    try {
+      const notifications = await $axios.$get('/api/getNotifications', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: { userId }
+      })
+
+      const authorPairs = await Promise.all(
+        notifications.map(async (notification) => {
+          const authorA = {
+            id: notification.author.id,
+            name: notification.author.name,
+            asin: notification.author.asin,
+            description: notification.author.description,
+            imagePath: notification.author.imagePath,
+            alias: [],
+            libraryId: notification.author.libraryId,
+            is_alias_of: notification.author.is_alias_of
+          }
+
+          const authorB = {
+            id: notification.aliasAuthor.id,
+            name: notification.aliasAuthor.name,
+            asin: notification.aliasAuthor.asin,
+            description: notification.aliasAuthor.description,
+            imagePath: notification.aliasAuthor.imagePath,
+            alias: [],
+            libraryId: notification.aliasAuthor.libraryId,
+            is_alias_of: notification.aliasAuthor.is_alias_of
+          }
+
+          if (!authorA.is_alias_of) {
+            authorA.alias = await $axios.$get(`/api/authors/${authorA.id}/alias`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+          }
+
+          if (!authorB.is_alias_of) {
+            authorB.alias = await $axios.$get(`/api/authors/${authorB.id}/alias`, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+          }
+
+          return {
+            authorA,
+            authorB,
+            metadata: {
+              handled: notification.handled || false,
+              read: notification.read || false,
+              notificationId: notification.notificationId
+            }
+          }
+        })
+      )
+      return { authorPairs }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+      return { authorPairs: [] }
+    }
+  },
   components: {
     AuthorCard,
     MergeAuthorModal,
@@ -47,6 +123,12 @@ export default {
     }
   },
   computed: {
+    hasUnreadNotifications() {
+      return this.authorPairs.some((pair) => {
+        const handled = pair?.metadata?.handled
+        return !handled
+      })
+    },
     userToken() {
       return this.$store.getters['user/getToken']
     },
@@ -61,114 +143,163 @@ export default {
     }
   },
   methods: {
-    async fetchAuthorPairs() {
-      console.log('---------fetchAuthorPairs started-------------')
+    async fetchAuthorPairs(isRead = false) {
       try {
         const token = this.userToken
-        console.log(`------------${this.$store.getters['user/getToken']}---------`)
+
         const response = await this.$axios.get('/api/getNotifications', {
           headers: {
             Authorization: `Bearer ${token}`
-          }
+          },
+          params: { isRead }
         })
-        this.authorPairs = response.data.map((notification) => {
-          console.log(`------${notification}--------`)
-          return [
-            {
-              id: notification.id,
-              name: notification.name,
-              numBooks: notification.numBooks,
-              imagePath: notification.imagePath,
-              asin: notification.asin,
-              description: notification.description,
-              alias: notification.alias,
-              handled: notification.handled || false
-            },
-            {
-              id: notification.id,
-              name: notification.name,
-              numBooks: notification.numBooks,
-              imagePath: notification.imagePath,
-              asin: notification.asin,
-              description: notification.description,
-              alias: notification.alias,
-              handled: notification.handled || false
+        console.log('----------isRead------------', isRead, response)
+        this.authorPairs = await Promise.all(
+          response.data.map(async (notification) => {
+            const authorA = {
+              id: notification.author.id,
+              name: notification.author.name,
+              asin: notification.author.asin,
+              description: notification.author.description,
+              imagePath: notification.author.imagePath,
+              alias: [],
+              libraryId: notification.author.libraryId,
+              is_alias_of: notification.author.is_alias_of
             }
-          ]
-        })
-        this.updateGlobalNotificationsState()
+
+            const authorB = {
+              id: notification.aliasAuthor.id,
+              name: notification.aliasAuthor.name,
+              asin: notification.aliasAuthor.asin,
+              description: notification.aliasAuthor.description,
+              imagePath: notification.aliasAuthor.imagePath,
+              alias: [],
+              libraryId: notification.aliasAuthor.libraryId,
+              is_alias_of: notification.aliasAuthor.is_alias_of
+            }
+
+            if (!authorA.is_alias_of) {
+              authorA.alias = await this.fetchAuthorAlias(authorA.id)
+            }
+
+            if (!authorB.is_alias_of) {
+              authorB.alias = await this.fetchAuthorAlias(authorB.id)
+            }
+
+            return {
+              authorA,
+              authorB,
+              metadata: {
+                handled: notification.handled || false,
+                read: notification.read || false,
+                notificationId: notification.notificationId
+              }
+            }
+          })
+        )
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
     },
+
+    async fetchAuthorAlias(authorId) {
+      try {
+        const token = this.userToken
+        const response = await this.$axios.get(`/api/authors/${authorId}/alias`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        return response.data
+      } catch (error) {
+        console.error('Failed to fetch author alias:', error)
+        return []
+      }
+    },
+
     editAuthor(author) {
       this.$store.commit('globals/showEditAuthorModal', author)
     },
+
     showMergeModal(authorPair) {
+      if (!authorPair || !authorPair.authorA || !authorPair.authorB || !authorPair.metadata) {
+        console.error('Invalid authorPair data:', authorPair)
+        return
+      }
+      console.log('selectedAuthorPair.metadata:', authorPair.metadata)
       this.selectedAuthorPair = authorPair
       this.isMergeModalVisible = true
     },
+
     closeMergeModal() {
       this.isMergeModalVisible = false
       this.selectedAuthorPair = null
     },
+
     showMakeAliasModal(authorPair) {
       this.selectedAuthorPair = authorPair
       this.isMakeAliasModalVisible = true
     },
-    closeMakeAliasModal(authorPair) {
+
+    closeMakeAliasModal() {
       this.isMakeAliasModalVisible = false
       this.selectedAuthorPair = null
     },
-    async handleMerge(mergedAuthor) {
-      console.log('Merged Author:', mergedAuthor)
-      this.selectedAuthorPair.forEach((author) => (author.handled = true))
-      await this.markNotificationAsHandled(this.selectedAuthorPair)
+
+    async handleMerge() {
+      this.selectedAuthorPair.metadata.handled = true
+      this.authorPairs = [...this.authorPairs]
       this.isMergeModalVisible = false
-      this.updateGlobalNotificationsState()
     },
-    async handleMakeAlias(aliasAuthor) {
-      await this.markNotificationAsHandled(this.selectedAuthorPair)
+
+    async handleMakeAlias() {
+      this.selectedAuthorPair.metadata.handled = true
+      this.authorPairs = [...this.authorPairs]
       this.isMakeAliasModalVisible = false
-      this.updateGlobalNotificationsState()
     },
+
+    markNotificationAsHandled(authorPair) {
+      authorPair.forEach((author) => {
+        author.handled = true
+      })
+      this.authorPairs = [...this.authorPairs]
+    },
+
     async cancelNotification(authorPairToCancel) {
-      this.authorPairs = this.authorPairs.filter((pair) => pair !== authorPairToCancel)
-      this.updateGlobalNotificationsState()
+      const localMetadata = authorPairToCancel.metadata ? JSON.parse(JSON.stringify(authorPairToCancel.metadata)) : {}
+      this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== localMetadata.notificationId)
     },
-    updateGlobalNotificationsState() {
-      const hasUnread = this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
-      this.$store.commit('setHasUnreadNotifications', hasUnread)
-    },
+
     mouseover(index) {
       this.$set(this.isHovering, index, true)
     },
+
     mouseleave(index) {
       this.$set(this.isHovering, index, false)
     },
+
     async searchAuthor(author) {
       this.searching = true
       const payload = {}
+
       if (author.asin) payload.asin = author.asin
       else payload.q = author.name
 
-      payload.region = 'us'
-      if (this.libraryProvider.startsWith('audible.')) {
-        payload.region = this.libraryProvider.split('.').pop() || 'us'
-      }
+      payload.region = this.libraryProvider.startsWith('audible.') ? this.libraryProvider.split('.').pop() : 'us'
 
       const response = await this.$axios.$post(`/api/authors/${author.id}/match`, payload).catch((error) => {
         console.error('Failed', error)
         return null
       })
+
       if (!response) {
         this.$toast.error(`Author ${author.name} not found`)
       } else if (response.updated) {
-        if (response.author.imagePath) this.$toast.success(`Author ${response.author.name} was updated`)
-        else this.$toast.success(`Author ${response.author.name} was updated (no image found)`)
+        this.$toast.success(`Author ${response.author.name} was updated`)
       } else {
         this.$toast.info(`No updates were made for Author ${response.author.name}`)
       }
+
       this.searching = false
     }
   },
@@ -205,7 +336,6 @@ export default {
   padding: 10px;
   box-sizing: border-box;
   overflow: visible;
-  padding-right: 10px;
 }
 
 .AuthorCard {

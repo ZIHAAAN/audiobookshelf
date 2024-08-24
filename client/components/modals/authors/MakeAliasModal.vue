@@ -30,15 +30,54 @@
 </template>
 
 <script>
+import CoversAuthorImage from '@/components/covers/AuthorImage.vue'
+
 export default {
+  components: {
+    CoversAuthorImage
+  },
   props: {
-    authorA: Object,
-    authorB: Object
+    authorA: {
+      type: Object,
+      required: true
+    },
+    authorB: {
+      type: Object,
+      required: true
+    },
+    metadata: {
+      type: Object,
+      required: true
+    }
+  },
+  data() {
+    return {
+      selectedAuthor: 'A',
+      mergedAuthor: {
+        name: '',
+        imagePath: '',
+        asin: '',
+        description: '',
+        alias: []
+      },
+      selectedImage: 'A',
+      selectedASIN: 'A',
+      selectedDescription: 'A',
+      selectedAliasA: {},
+      selectedAliasB: {},
+      defaultImage: '/path/to/default-image.png'
+    }
+  },
+  computed: {
+    userToken() {
+      return this.$store.getters['user/getToken']
+    }
+  },
+  mounted() {
+    this.setDefaultAuthor()
+    this.swapAuthorIds()
   },
   methods: {
-    makeAlias(direction) {
-      // Make alias logic...
-    },
     async makeAlias(direction) {
       console.log(`Making alias: ${direction}`)
 
@@ -51,7 +90,7 @@ export default {
 
       const targetAuthor = direction === 'AtoB' ? this.authorB : this.authorA
       const aliasOfAuthor = direction === 'AtoB' ? this.authorA : this.authorB
-      // 如果 aliasOfAuthor 已经是其他人的 alias，询问用户是否要覆盖
+
       if (aliasOfAuthor.is_alias_of) {
         const confirmOverride = confirm(`Author ${aliasOfAuthor.name} is already an alias of another author. Do you want to override this alias relationship?`)
         if (!confirmOverride) {
@@ -78,7 +117,7 @@ export default {
           asin: targetAuthor.asin,
           description: targetAuthor.description,
           alias: targetAuthor.alias,
-          is_alias_of: aliasOfAuthor.id // 设置为另一个作者的ID，表示成为其别名
+          is_alias_of: aliasOfAuthor.id
         }
         console.log('Sending alias payload:', payload)
 
@@ -93,27 +132,10 @@ export default {
         console.error('Make alias error:', error)
       }
     },
-    async handleAction(action) {
-      if (action === 'mergeAuthors') {
-        await this.mergeAuthors()
-      } else if (action === 'mergeAliasesToB') {
-        if (!this.authorB.is_alias_of) {
-          await this.makeAlias('AtoB')
-        } else {
-          this.$toast.error('Cannot make an alias of an author who is already an alias')
-        }
-      } else if (action === 'mergeAliasesToA') {
-        if (!this.authorA.is_alias_of) {
-          await this.makeAlias('BtoA')
-        } else {
-          this.$toast.error('Cannot make an alias of an author who is already an alias')
-        }
-      }
-    },
+
     close() {
       this.$emit('close');
     }
   }
 };
 </script>
-.

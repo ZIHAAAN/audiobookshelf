@@ -27,13 +27,37 @@
               <span>Description: {{ authorA.description }}</span>
               <input type="radio" class="option-input" name="description" v-model="selectedDescription" value="A" @change="updateMergedAuthorDescription('A')" />
             </label>
-            <label v-for="(alias, index) in authorA.alias" :key="index">
-              <span>Alias: {{ alias.name || alias }}</span>
-              <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)" />
-            </label>
+<!--            <label v-for="(alias, index) in authorA.alias" :key="index">-->
+<!--              <span>Alias: {{ alias.name || alias }}</span>-->
+<!--              <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)" />-->
+<!--            </label>-->
+            <!--TODO: just for TEST, add v-for like the upper label to this ul-->
+            <span>Alias(Multiple options): </span>
+            <ul class="alias-tags">
+              <li>
+                <!-- TODO: add attributes to input tag like the upper input-->
+                <!-- TODO: replace demo with {{alias.name}} in below label-->
+                <label>
+                  <input type="checkbox" name="alias"/>
+                  <div class="alias-tag">Demo</div>
+                </label>
+              </li>
+              <li>
+                <label>
+                  <input type="checkbox" name="alias"/>
+                  <div class="alias-tag">Demo2</div>
+                </label>
+              </li>
+              <li>
+                <label>
+                  <input type="checkbox" name="alias"/>
+                  <div class="alias-tag">Demo3-Looong</div>
+                </label>
+              </li>
+            </ul>
+
           </div>
         </div>
-
 
         <div class="merged-author-section">
           <h2>Combination</h2>
@@ -104,6 +128,10 @@ export default {
     authorB: {
       type: Object,
       required: true
+    },
+    metadata: {
+      type: Object,
+      required: true
     }
   },
   data() {
@@ -131,6 +159,7 @@ export default {
   },
   mounted() {
     this.setDefaultAuthor()
+    this.swapAuthorIds()
   },
   methods: {
     setDefaultAuthor() {
@@ -143,9 +172,19 @@ export default {
         this.updateMergedAuthorAlias(this.selectedAuthor, index)
       }
     },
+    swapAuthorIds() {
+      const tempId = this.authorA.id
+      this.authorA.id = this.authorB.id
+      this.authorB.id = tempId
+    },
     updateMergedAuthorName(author) {
-      this.mergedAuthor.name = author === 'A' ? this.authorA.name : this.authorB.name
-      this.mergedAuthor.id = author === 'A' ? this.authorA.id : this.authorB.id // 更新 id
+      if (author === 'A') {
+        this.mergedAuthor.name = this.authorA.name
+        this.mergedAuthor.id = this.authorB.id
+      } else {
+        this.mergedAuthor.name = this.authorB.name
+        this.mergedAuthor.id = this.authorA.id
+      }
     },
     updateMergedAuthorImage(author) {
       this.mergedAuthor.imagePath = author === 'A' ? this.authorA.imagePath : this.authorB.imagePath
@@ -165,23 +204,8 @@ export default {
       this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])]
     },
     async mergeAuthors() {
-      console.log('Merging authors')
-      console.log('Author A:', this.authorA)
-      console.log('Author B:', this.authorB)
-      console.log('Merged Author:', this.mergedAuthor)
-
-      console.log('Payload before sending:', {
-        id: this.mergedAuthor.id,
-        name: this.mergedAuthor.name,
-        asin: this.mergedAuthor.asin,
-        description: this.mergedAuthor.description,
-        alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])],
-        is_alias_of: null
-      })
-      console.log('Selected Author A ID:', this.authorA.id)
-      console.log('Selected Author B ID:', this.authorB.id)
-      console.log('Merged Author ID:', this.mergedAuthor.id)
-      console.log('Merged Author Name:', this.mergedAuthor.name)
+      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      console.log('Notification ID:', metadata.notificationId)
 
       try {
         const token = this.userToken
@@ -191,24 +215,64 @@ export default {
         }
         const payload = {
           id: this.mergedAuthor.id,
-          name: this.authorA.name,
+          name: this.mergedAuthor.name,
           asin: this.mergedAuthor.asin,
           description: this.mergedAuthor.description,
-          alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])], // 合并两个作者的别名
+          alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])],
           is_alias_of: null
         }
 
-        console.log('Sending merge payload:', payload)
-        console.log('Target Author ID for merge:', this.mergedAuthor.id)
+        console.log('Target Author ID for merge:', this.mergedAuthor.name)
         const response = await this.$axios.patch(`/api/authors/${this.mergedAuthor.id}`, payload, { headers })
         console.log('Merge successful:', response.data)
 
         this.$toast.success('Authors merged successfully')
-        this.$emit('merge', response.data)
+        this.$emit('merge', metadata)
         this.close()
       } catch (error) {
         this.$toast.error('Failed to merge authors')
         console.error('Merge error:', error)
+      }
+    },
+    async handleAction(action) {
+      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      try {
+        if (action === 'mergeAuthors') {
+          await this.mergeAuthors()
+          await this.clearNotifications(metadata.notificationId)
+        } else if (action === 'mergeAliasesToB') {
+          if (!this.authorB.is_alias_of) {
+            await this.makeAlias('AtoB')
+            await this.clearNotifications(metadata.notificationId)
+          } else {
+            this.$toast.error('Cannot make an alias of an author who is already an alias')
+          }
+        } else if (action === 'mergeAliasesToA') {
+          if (!this.authorA.is_alias_of) {
+            await this.makeAlias('BtoA')
+            await this.clearNotifications(metadata.notificationId)
+          } else {
+            this.$toast.error('Cannot make an alias of an author who is already an alias')
+          }
+        }
+      } catch (error) {
+        console.error('Error handling action:', error)
+      }
+    },
+    async clearNotifications(notificationId) {
+      try {
+        const token = this.userToken
+        await this.$axios.get('/api/clearNotifications', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          params: { notificationId }
+        })
+        console.log('Notification ID being sent:', notificationId)
+        this.authorPairs = this.authorPairs || []
+        this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== notificationId)
+      } catch (error) {
+        console.error('Failed to clear notification:', error)
       }
     },
     close() {
@@ -437,6 +501,46 @@ export default {
   display: block;
   position: relative;
   z-index: 100;
+}
+
+ul {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
+  border-radius: 10px;
+  padding: 10px;
+  width: 100%;
+}
+ul li {
+  list-style: none;
+  text-align: center;
+  margin: 3px;
+}
+ul li label {
+  position: relative;
+  cursor: pointer;
+}
+ul li label input[type=checkbox] {
+  position: absolute;
+  opacity: 0;
+}
+ul li label :checked ~ .alias-tag {
+  color: white;
+  background-color: #818181;
+}
+
+ul li label .alias-tag {
+  color: black;
+  background: #dddddd;
+  padding: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 5px;
 }
 
 </style>
