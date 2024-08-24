@@ -30,8 +30,8 @@
             <ul class="alias-tags" v-for="(alias, index) in authorA.alias" :key="index">
               <li>
                 <label>
-                  <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)"/>
-                  <div class="alias-tag"> {{alias.name}} </div>
+                  <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)" />
+                  <div class="alias-tag">{{ alias.name }}</div>
                 </label>
               </li>
             </ul>
@@ -77,8 +77,8 @@
             <ul class="alias-tags" v-for="(alias, index) in authorB.alias" :key="index">
               <li>
                 <label>
-                  <input type="checkbox" :name="'aliasB' + index" v-model="selectedAliasB[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('B', index)"/>
-                  <div class="alias-tag"> {{alias.name}} </div>
+                  <input type="checkbox" :name="'aliasB' + index" v-model="selectedAliasB[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('B', index)" />
+                  <div class="alias-tag">{{ alias.name }}</div>
                 </label>
               </li>
             </ul>
@@ -90,7 +90,6 @@
         <ui-btn type="button" color="success" class="m-3" @click="mergeAuthors">Merge</ui-btn>
         <ui-btn type="button" @click="close" class="m-3">Cancel</ui-btn>
       </div>
-
     </div>
   </div>
 </template>
@@ -178,12 +177,32 @@ export default {
       this.mergedAuthor.description = author === 'A' ? this.authorA.description : this.authorB.description
     },
     updateMergedAuthorAlias(author, index) {
+      console.log('Checkbox clicked:', author, index)
+      let alias
       if (author === 'A') {
-        this.$set(this.selectedAliasA, index, this.authorA.alias[index].name || this.authorA.alias[index])
+        alias = this.authorA.alias[index].name || this.authorA.alias[index]
+        if (this.selectedAliasA[index]) {
+          this.$set(this.selectedAliasA, index, alias) // 勾选时添加别名
+        } else {
+          this.$delete(this.selectedAliasA, index) // 取消勾选时移除别名
+        }
       } else {
-        this.$set(this.selectedAliasB, index, this.authorB.alias[index].name || this.authorB.alias[index])
+        alias = this.authorB.alias[index].name || this.authorB.alias[index]
+        if (this.selectedAliasB[index]) {
+          this.$set(this.selectedAliasB, index, alias) // 勾选时添加别名
+        } else {
+          this.$delete(this.selectedAliasB, index) // 取消勾选时移除别名
+        }
       }
-      this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])]
+
+      // 合并两个别名列表，并移除空值
+      this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])].filter(Boolean)
+      // if (author === 'A') {
+      //   this.$set(this.selectedAliasA, index, this.authorA.alias[index].name || this.authorA.alias[index])
+      // } else {
+      //   this.$set(this.selectedAliasB, index, this.authorB.alias[index].name || this.authorB.alias[index])
+      // }
+      // this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])]
     },
     async mergeAuthors() {
       const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
@@ -430,7 +449,7 @@ export default {
   width: 20px;
   border-radius: 5px;
   position: absolute;
-  content: "›";
+  content: '›';
   display: inline-block;
   font-size: 24px;
   font-weight: bold;
@@ -440,12 +459,12 @@ export default {
 }
 
 .author-right .option-input:checked::before {
-  content: "‹";
+  content: '‹';
 }
 
 .option-input:checked::after {
   background: #2c2c2c;
-  content: "";
+  content: '';
   display: block;
   position: relative;
   z-index: 100;
@@ -479,7 +498,7 @@ ul li label {
   position: relative;
   cursor: pointer;
 }
-ul li label input[type=checkbox] {
+ul li label input[type='checkbox'] {
   position: absolute;
   opacity: 0;
 }
@@ -497,5 +516,4 @@ ul li label .alias-tag {
   align-items: center;
   border-radius: 5px;
 }
-
 </style>

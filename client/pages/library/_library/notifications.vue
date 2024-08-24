@@ -25,7 +25,7 @@
 <script>
 import AuthorCard from '@/components/cards/AuthorCard.vue'
 import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
-import MakeAliasModal  from '@/components/modals/authors/MakeAliasModal.vue'
+import MakeAliasModal from '@/components/modals/authors/MakeAliasModal.vue'
 
 export default {
   async asyncData({ store, redirect, params, $axios }) {
@@ -123,12 +123,12 @@ export default {
     }
   },
   computed: {
-    // hasUnreadNotifications() {
-    //   return this.authorPairs.some((pair) => {
-    //     const handled = pair?.metadata?.handled
-    //     return !handled
-    //   })
-    // },
+    hasUnreadNotifications() {
+      return this.authorPairs.some((pair) => {
+        const handled = pair?.metadata?.handled
+        return !handled
+      })
+    },
     userToken() {
       return this.$store.getters['user/getToken']
     },
@@ -197,11 +197,6 @@ export default {
             }
           })
         )
-<<<<<<< HEAD
-
-        // this.updateGlobalNotificationsState()
-=======
->>>>>>> kang/master
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
@@ -252,18 +247,8 @@ export default {
     },
 
     async handleMerge() {
-<<<<<<< HEAD
-      //   const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
-=======
->>>>>>> kang/master
       this.selectedAuthorPair.metadata.handled = true
       this.authorPairs = [...this.authorPairs]
-<<<<<<< HEAD
-
-      await this.clearNotifications(localMetadata.notificationId) // 调用清除通知的 API
-      //this.isMergeModalVisible = false
-      // this.updateGlobalNotificationsState()
-=======
       this.isMergeModalVisible = false
     },
 
@@ -271,7 +256,6 @@ export default {
       this.selectedAuthorPair.metadata.handled = true
       this.authorPairs = [...this.authorPairs]
       this.isMakeAliasModalVisible = false
->>>>>>> kang/master
     },
 
     markNotificationAsHandled(authorPair) {
@@ -279,10 +263,6 @@ export default {
         author.handled = true
       })
       this.authorPairs = [...this.authorPairs]
-<<<<<<< HEAD
-      // this.updateGlobalNotificationsState()
-=======
->>>>>>> kang/master
     },
 
     async cancelNotification(authorPairToCancel) {
