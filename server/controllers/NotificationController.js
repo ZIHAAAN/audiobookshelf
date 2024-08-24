@@ -80,7 +80,7 @@ class NotificationController {
         notification.handled = true
       }
       //save database
-      await dbUser.save()
+      await Database.userModel.updateFromOld(dbUser)
       res.sendStatus(200)
     } catch (error) {
       console.error('Error clearing notifications:', error)

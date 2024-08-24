@@ -5,131 +5,48 @@
 
       <p class="text-center mb-6">The following authors are detected as similar. Do you want to merge them?</p>
       <div class="grid grid-cols-1 gap-4 justify-center">
-        <div v-for="(authorPair, index) in authorPairs" :key="index" :class="['notification', authorPair[0].handled && authorPair[1].handled ? 'read' : 'unread']" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
-          <div class="flex justify-between items-center w-full mb-4 author-container">
+        <div v-for="(authorPair, index) in authorPairs" :key="index" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
+          <div class="flex justify-around w-full m-3 p-5 author-container space-x-4">
             <AuthorCard v-for="author in authorPair" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
           </div>
-          <!--     <div>
-            {{ authorPair.id }}
-            {{ authorPair.name }}
-            {{ authorPair.alias }}
-            {{ authorPair.numBooks }}
-            {{ authorPair.description }}
-
-          </div>-->
           <div class="flex justify-center space-x-4 w-full mt-4">
             <button class="btn btn-primary" @click="showMergeModal(authorPair)">Merge</button>
+            <button class="btn btn-secondary" @click="showMakeAliasModal(authorPair)">Make Alias</button>
             <button class="btn btn-secondary" @click="cancelNotification(authorPair)">Cancel</button>
           </div>
         </div>
       </div>
     </div>
     <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair[0]" :authorB="selectedAuthorPair[1]" @close="closeMergeModal" @merge="handleMerge" />
+    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair[0]" :authorB="selectedAuthorPair[1]" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
   </div>
 </template>
 
 <script>
 import AuthorCard from '@/components/cards/AuthorCard.vue'
-import MergeAuthorModal from '@/components/modals/MergeAuthorModal.vue'
+import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
+import MakeAliasModal  from '@/components/modals/authors/MakeAliasModal.vue'
 
 export default {
-  async asyncData({ store, redirect, params, $axios }) {
-    const token = store.getters['user/getToken']
-    const userId = params.library
-
-    console.log('params:', params) // 检查 params 是否正确传递
-    console.log('userId:', userId) // 确认 userId 是否正确
-
-    if (!token) {
-      return redirect('/login')
-    }
-
-    try {
-      // 获取通知数据
-      const notifications = await $axios.$get('/api/getNotifications', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        params: { userId }
-      })
-
-      // 处理通知数据，生成 authorPairs
-      const authorPairs = await Promise.all(
-        notifications.map(async (notification) => {
-          const authorA = {
-            id: notification.author.id,
-            name: notification.author.name,
-            asin: notification.author.asin,
-            description: notification.author.description,
-            imagePath: notification.author.imagePath,
-            alias: [],
-            libraryId: notification.author.libraryId,
-            is_alias_of: notification.author.is_alias_of,
-            handled: notification.handled || false
-          }
-
-          const authorB = {
-            id: notification.aliasAuthor.id,
-            name: notification.aliasAuthor.name,
-            asin: notification.aliasAuthor.asin,
-            description: notification.aliasAuthor.description,
-            imagePath: notification.aliasAuthor.imagePath,
-            alias: [],
-            libraryId: notification.aliasAuthor.libraryId,
-            is_alias_of: notification.aliasAuthor.is_alias_of,
-            handled: notification.handled || false
-          }
-
-          // 获取作者 A 的别名
-          if (!authorA.is_alias_of) {
-            authorA.alias = await $axios.$get(`/api/authors/${authorA.id}/alias`, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            })
-          }
-
-          // 获取作者 B 的别名
-          if (!authorB.is_alias_of) {
-            authorB.alias = await $axios.$get(`/api/authors/${authorB.id}/alias`, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            })
-          }
-
-          return [authorA, authorB]
-        })
-      )
-
-      return { authorPairs }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-      return { authorPairs: [] }
-    }
-  },
-
   components: {
     AuthorCard,
-    MergeAuthorModal
+    MergeAuthorModal,
+    MakeAliasModal
   },
-
   data() {
     return {
+      authorPairs: [],
       isMergeModalVisible: false,
+      isMakeAliasModalVisible: false,
       selectedAuthorPair: null,
       isHovering: {},
       searching: false,
       nameBelow: false,
-      cardWidth: 200,
-      cardHeight: 250
+      cardWidth: 150,
+      cardHeight: 200
     }
   },
-
   computed: {
-    hasUnreadNotifications() {
-      return this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
-    },
     userToken() {
       return this.$store.getters['user/getToken']
     },
@@ -143,163 +60,121 @@ export default {
       return this.$store.getters['user/getSizeMultiplier']
     }
   },
-
   methods: {
-    async fetchAuthorPairs(clearNotifications = false) {
+    async fetchAuthorPairs() {
+      console.log('---------fetchAuthorPairs started-------------')
       try {
         const token = this.userToken
-
+        console.log(`------------${this.$store.getters['user/getToken']}---------`)
         const response = await this.$axios.get('/api/getNotifications', {
           headers: {
             Authorization: `Bearer ${token}`
-          },
-          params: { clearNotifications }
+          }
         })
-        console.log('----------clearNotifications------------', clearNotifications, response)
-        this.authorPairs = await Promise.all(
-          response.data.map(async (notification) => {
-            const authorA = {
-              id: notification.author.id,
-              name: notification.author.name,
-              asin: notification.author.asin,
-              description: notification.author.description,
-              imagePath: notification.author.imagePath,
-              alias: [],
-              libraryId: notification.author.libraryId,
-              is_alias_of: notification.author.is_alias_of,
+        this.authorPairs = response.data.map((notification) => {
+          console.log(`------${notification}--------`)
+          return [
+            {
+              id: notification.id,
+              name: notification.name,
+              numBooks: notification.numBooks,
+              imagePath: notification.imagePath,
+              asin: notification.asin,
+              description: notification.description,
+              alias: notification.alias,
+              handled: notification.handled || false
+            },
+            {
+              id: notification.id,
+              name: notification.name,
+              numBooks: notification.numBooks,
+              imagePath: notification.imagePath,
+              asin: notification.asin,
+              description: notification.description,
+              alias: notification.alias,
               handled: notification.handled || false
             }
-
-            const authorB = {
-              id: notification.aliasAuthor.id,
-              name: notification.aliasAuthor.name,
-              asin: notification.aliasAuthor.asin,
-              description: notification.aliasAuthor.description,
-              imagePath: notification.aliasAuthor.imagePath,
-              alias: [],
-              libraryId: notification.aliasAuthor.libraryId,
-              is_alias_of: notification.aliasAuthor.is_alias_of,
-              handled: notification.handled || false
-            }
-
-            if (!authorA.is_alias_of) {
-              authorA.alias = await this.fetchAuthorAlias(authorA.id)
-            }
-
-            if (!authorB.is_alias_of) {
-              authorB.alias = await this.fetchAuthorAlias(authorB.id)
-            }
-
-            return [authorA, authorB]
-          })
-        )
-
+          ]
+        })
         this.updateGlobalNotificationsState()
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
     },
-
-    async fetchAuthorAlias(authorId) {
-      try {
-        const token = this.userToken
-        const response = await this.$axios.get(`/api/authors/${authorId}/alias`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        return response.data
-      } catch (error) {
-        console.error('Failed to fetch author alias:', error)
-        return []
-      }
-    },
-
     editAuthor(author) {
       this.$store.commit('globals/showEditAuthorModal', author)
     },
-
     showMergeModal(authorPair) {
       this.selectedAuthorPair = authorPair
       this.isMergeModalVisible = true
     },
-
     closeMergeModal() {
       this.isMergeModalVisible = false
       this.selectedAuthorPair = null
     },
-
+    showMakeAliasModal(authorPair) {
+      this.selectedAuthorPair = authorPair
+      this.isMakeAliasModalVisible = true
+    },
+    closeMakeAliasModal(authorPair) {
+      this.isMakeAliasModalVisible = false
+      this.selectedAuthorPair = null
+    },
     async handleMerge(mergedAuthor) {
-      this.selectedAuthorPair.forEach((author) => {
-        author.handled = true
-      })
-
-      this.authorPairs = [...this.authorPairs]
+      console.log('Merged Author:', mergedAuthor)
+      this.selectedAuthorPair.forEach((author) => (author.handled = true))
+      await this.markNotificationAsHandled(this.selectedAuthorPair)
       this.isMergeModalVisible = false
       this.updateGlobalNotificationsState()
     },
-
-    markNotificationAsHandled(authorPair) {
-      authorPair.forEach((author) => {
-        author.handled = true
-      })
-
-      this.authorPairs = [...this.authorPairs]
+    async handleMakeAlias(aliasAuthor) {
+      await this.markNotificationAsHandled(this.selectedAuthorPair)
+      this.isMakeAliasModalVisible = false
       this.updateGlobalNotificationsState()
     },
-
     async cancelNotification(authorPairToCancel) {
       this.authorPairs = this.authorPairs.filter((pair) => pair !== authorPairToCancel)
       this.updateGlobalNotificationsState()
     },
-
     updateGlobalNotificationsState() {
       const hasUnread = this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
       this.$store.commit('setHasUnreadNotifications', hasUnread)
-      this.$forceUpdate()
     },
-
     mouseover(index) {
       this.$set(this.isHovering, index, true)
     },
-
     mouseleave(index) {
       this.$set(this.isHovering, index, false)
     },
-
     async searchAuthor(author) {
       this.searching = true
       const payload = {}
-
       if (author.asin) payload.asin = author.asin
       else payload.q = author.name
 
-      payload.region = this.libraryProvider.startsWith('audible.') ? this.libraryProvider.split('.').pop() : 'us'
+      payload.region = 'us'
+      if (this.libraryProvider.startsWith('audible.')) {
+        payload.region = this.libraryProvider.split('.').pop() || 'us'
+      }
 
       const response = await this.$axios.$post(`/api/authors/${author.id}/match`, payload).catch((error) => {
         console.error('Failed', error)
         return null
       })
-
       if (!response) {
         this.$toast.error(`Author ${author.name} not found`)
       } else if (response.updated) {
-        this.$toast.success(`Author ${response.author.name} was updated`)
+        if (response.author.imagePath) this.$toast.success(`Author ${response.author.name} was updated`)
+        else this.$toast.success(`Author ${response.author.name} was updated (no image found)`)
       } else {
         this.$toast.info(`No updates were made for Author ${response.author.name}`)
       }
-
       this.searching = false
     }
   },
-
   mounted() {
-    // console.log(this)
-    // console.log('User ID:', this.user.id)
-    console.log('+++++++++++++++++++++++++=====')
-    this.fetchAuthorPairs(true)
+    this.fetchAuthorPairs()
   },
-
   beforeDestroy() {
     this.authorPairs.forEach((authorPair) => {
       this.$eventBus.$off(`searching-author-${authorPair[0].id}`, this.setSearching)
@@ -321,16 +196,7 @@ export default {
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-.notification.read {
-  /* 已读通知样式 */
-  background-color: #444;
-}
 
-.notification.unread {
-  /* 未读通知样式 */
-  background-color: #2c2c2c;
-  border-left: 4px solid #2563eb; /* 左侧标记 */
-}
 .author-container {
   display: flex;
   justify-content: center;
