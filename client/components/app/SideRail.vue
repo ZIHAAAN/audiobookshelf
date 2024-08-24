@@ -121,7 +121,7 @@
           <p class="text-xs font-mono pb-0.5">{{ numIssues }}</p>
         </div>
       </nuxt-link>
-      <div class="we" @click="clearNotification">
+      <div class="we" @click="readNotification">
         <nuxt-link v-if="isBookLibrary" :to="`/library/${currentLibraryId}/notifications`" class="w-full h-20 flex flex-col items-center justify-center text-white border-b border-primary border-opacity-70 hover:bg-primary cursor-pointer relative" :class="isPodcastLatestPage ? 'bg-primary bg-opacity-80' : 'bg-bg bg-opacity-60'">
           <span class="material-symbols text-2xl">
             Notifications
@@ -159,11 +159,7 @@ export default {
     Source() {
       return this.$store.state.Source
     },
-    // userId() {
-    //   const id = this.$store.getters['user/getUserId']
-    //   console.log('SideRail User ID:', id) // 添加这一行来检查 userId 是否获User取到
-    //   return id
-    // },
+
     isNotificationsPage() {
       return this.$route.name === 'library-library-notifications'
     },
@@ -261,7 +257,10 @@ export default {
     },
     notifications() {
       console.log('Computed - Notifications from state:', this.$store.state.globals.notifications)
-      return this.$store.state.globals.notifications
+      //return this.$store.state.globals.notifications
+      const notifications = this.$store.state.globals.notifications
+      this.isNotification = notifications.some((notification) => !notification.isRead)
+      return notifications
     },
 
     userToken() {
@@ -269,6 +268,7 @@ export default {
     }
   },
   mounted() {
+    this.isNotification = false
     this.fetchNotifications()
   },
   methods: {
@@ -291,7 +291,7 @@ export default {
         console.log('Vuex notifications:', this.$store.state.globals.notifications)
 
         notifications.forEach((notification) => {
-          if (notification.handled === false) {
+          if (!notification.read) {
             this.isNotification = true
           }
         })
@@ -301,16 +301,20 @@ export default {
         // } else {
         //   this.isNotification = false
         // }
-        console.log('Vuex notifications:', this.$store.state.globals.notifications)
-        console.log('isNotification:', this.isNotification) // 验证 isNotification 是否正确设置
+        console.log('---isNotification---:', this.isNotification) // 验证 isNotification 是否正确设置
       } catch (error) {
         console.error('Failed to fetch notifications:', error)
         this.isNotification = false // 在出现错误时，假设没有通知
       }
     },
-    clearNotification() {
+    readNotification() {
       this.isNotification = false
-      console.log('-----------clearNotification---------------')
+      const notificationIndex = this.$store.state.globals.notifications.findIndex((notification) => notification.id === notificationId)
+
+      if (notificationIndex !== -1) {
+        this.$store.commit('updateNotificationReadStatus', { index: notificationIndex, isRead: true })
+      }
+      console.log('-----------readNotification---------------')
       console.log(this.isNotification)
     }
   }
