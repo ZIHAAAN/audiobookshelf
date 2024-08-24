@@ -26,7 +26,7 @@
 
 <script>
 import EditModal from '@/components/modals/authors/EditModal.vue'
-import MergeAuthorModal from '@/components/modals/MergeAuthorModal.vue'
+import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
 
 export default {
   components: {

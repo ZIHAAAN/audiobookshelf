@@ -6,46 +6,40 @@
       <p class="text-center mb-6">The following authors are detected as similar. Do you want to merge them?</p>
       <div class="grid grid-cols-1 gap-4 justify-center">
         <div v-for="(authorPair, index) in authorPairs" :key="index" :class="['notification', authorPair.metadata.handled ? 'read' : 'unread']" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
-          <div class="flex justify-between items-center w-full mb-4 author-container">
+          <div class="flex justify-around w-full m-3 p5 author-container space-x-4">
             <AuthorCard v-for="author in [authorPair.authorA, authorPair.authorB]" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
           </div>
-          <!--     <div>
-            {{ authorPair.id }}
-            {{ authorPair.name }}
-            {{ authorPair.alias }}
-            {{ authorPair.numBooks }}
-            {{ authorPair.description }}
-
-          </div>-->
           <div class="flex justify-center space-x-4 w-full mt-4">
             <button class="btn btn-primary" @click="showMergeModal(authorPair)">Merge</button>
+            <button class="btn btn-primary" @click="showMakeAliasModal(authorPair)">Make Alias</button>
             <button class="btn btn-secondary" @click="cancelNotification(authorPair)">Cancel</button>
           </div>
         </div>
       </div>
     </div>
     <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :metadata="selectedAuthorPair.metadata" @close="closeMergeModal" @merge="handleMerge" />
+    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :metadata="selectedAuthorPair.metadata" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
   </div>
 </template>
 
 <script>
 import AuthorCard from '@/components/cards/AuthorCard.vue'
-import MergeAuthorModal from '@/components/modals/MergeAuthorModal.vue'
+import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
+import MakeAliasModal  from '@/components/modals/authors/MakeAliasModal.vue'
 
 export default {
   async asyncData({ store, redirect, params, $axios }) {
     const token = store.getters['user/getToken']
     const userId = params.library
 
-    console.log('params:', params) // 检查 params 是否正确传递
-    console.log('userId:', userId) // 确认 userId 是否正确
+    console.log('params:', params)
+    console.log('userId:', userId)
 
     if (!token) {
       return redirect('/login')
     }
 
     try {
-      // 获取通知数据
       const notifications = await $axios.$get('/api/getNotifications', {
         headers: {
           Authorization: `Bearer ${token}`
@@ -53,7 +47,6 @@ export default {
         params: { userId }
       })
 
-      // 处理通知数据，生成 authorPairs
       const authorPairs = await Promise.all(
         notifications.map(async (notification) => {
           const authorA = {
@@ -78,7 +71,6 @@ export default {
             is_alias_of: notification.aliasAuthor.is_alias_of
           }
 
-          // 获取作者 A 的别名
           if (!authorA.is_alias_of) {
             authorA.alias = await $axios.$get(`/api/authors/${authorA.id}/alias`, {
               headers: {
@@ -87,7 +79,6 @@ export default {
             })
           }
 
-          // 获取作者 B 的别名
           if (!authorB.is_alias_of) {
             authorB.alias = await $axios.$get(`/api/authors/${authorB.id}/alias`, {
               headers: {
@@ -96,43 +87,41 @@ export default {
             })
           }
 
-          // 将每对作者的数据以数组形式返回
           return {
             authorA,
             authorB,
             metadata: {
               handled: notification.handled || false,
               read: notification.read || false,
-              notificationId: notification.notificationId // 添加通知ID，便于后续操作
+              notificationId: notification.notificationId
             }
           }
         })
       )
-
       return { authorPairs }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
       return { authorPairs: [] }
     }
   },
-
   components: {
     AuthorCard,
-    MergeAuthorModal
+    MergeAuthorModal,
+    MakeAliasModal
   },
-
   data() {
     return {
+      authorPairs: [],
       isMergeModalVisible: false,
+      isMakeAliasModalVisible: false,
       selectedAuthorPair: null,
       isHovering: {},
       searching: false,
       nameBelow: false,
-      cardWidth: 200,
-      cardHeight: 250
+      cardWidth: 150,
+      cardHeight: 200
     }
   },
-
   computed: {
     // hasUnreadNotifications() {
     //   return this.authorPairs.some((pair) => {
@@ -153,7 +142,6 @@ export default {
       return this.$store.getters['user/getSizeMultiplier']
     }
   },
-
   methods: {
     async fetchAuthorPairs(isRead = false) {
       try {
@@ -204,13 +192,16 @@ export default {
               metadata: {
                 handled: notification.handled || false,
                 read: notification.read || false,
-                notificationId: notification.notificationId // 添加通知ID，便于后续操作
+                notificationId: notification.notificationId
               }
             }
           })
         )
+<<<<<<< HEAD
 
         // this.updateGlobalNotificationsState()
+=======
+>>>>>>> kang/master
       } catch (error) {
         console.error('Failed to fetch author pairs:', error)
       }
@@ -250,30 +241,53 @@ export default {
       this.selectedAuthorPair = null
     },
 
-    async handleMerge() {
-      //   const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
-      this.selectedAuthorPair.metadata.handled = true
+    showMakeAliasModal(authorPair) {
+      this.selectedAuthorPair = authorPair
+      this.isMakeAliasModalVisible = true
+    },
 
+    closeMakeAliasModal() {
+      this.isMakeAliasModalVisible = false
+      this.selectedAuthorPair = null
+    },
+
+    async handleMerge() {
+<<<<<<< HEAD
+      //   const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+=======
+>>>>>>> kang/master
+      this.selectedAuthorPair.metadata.handled = true
       this.authorPairs = [...this.authorPairs]
+<<<<<<< HEAD
 
       await this.clearNotifications(localMetadata.notificationId) // 调用清除通知的 API
       //this.isMergeModalVisible = false
       // this.updateGlobalNotificationsState()
+=======
+      this.isMergeModalVisible = false
+    },
+
+    async handleMakeAlias() {
+      this.selectedAuthorPair.metadata.handled = true
+      this.authorPairs = [...this.authorPairs]
+      this.isMakeAliasModalVisible = false
+>>>>>>> kang/master
     },
 
     markNotificationAsHandled(authorPair) {
       authorPair.forEach((author) => {
         author.handled = true
       })
-
       this.authorPairs = [...this.authorPairs]
+<<<<<<< HEAD
       // this.updateGlobalNotificationsState()
+=======
+>>>>>>> kang/master
     },
 
     async cancelNotification(authorPairToCancel) {
       const localMetadata = authorPairToCancel.metadata ? JSON.parse(JSON.stringify(authorPairToCancel.metadata)) : {}
       this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== localMetadata.notificationId)
-      this.updateGlobalNotificationsState()
     },
 
     mouseover(index) {
@@ -309,14 +323,9 @@ export default {
       this.searching = false
     }
   },
-
   mounted() {
-    // console.log(this)
-    // console.log('User ID:', this.user.id)
-    console.log('+++++++++++++++++++++++++=====')
-    this.fetchAuthorPairs(true)
+    this.fetchAuthorPairs()
   },
-
   beforeDestroy() {
     this.authorPairs.forEach((authorPair) => {
       this.$eventBus.$off(`searching-author-${authorPair[0].id}`, this.setSearching)
@@ -338,16 +347,7 @@ export default {
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-.notification.read {
-  /* 已读通知样式 */
-  background-color: #444;
-}
 
-.notification.unread {
-  /* 未读通知样式 */
-  background-color: #2c2c2c;
-  border-left: 4px solid #2563eb; /* 左侧标记 */
-}
 .author-container {
   display: flex;
   justify-content: center;
@@ -356,7 +356,6 @@ export default {
   padding: 10px;
   box-sizing: border-box;
   overflow: visible;
-  padding-right: 10px;
 }
 
 .AuthorCard {
