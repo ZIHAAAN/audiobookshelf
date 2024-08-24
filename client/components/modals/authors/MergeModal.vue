@@ -5,7 +5,6 @@
 
       <div class="merge-layout">
         <div class="author-section author-left">
-          <h3>{{ authorA.name }}</h3>
           <div class="author-details">
             <label>
               <span>
@@ -27,35 +26,15 @@
               <span>Description: {{ authorA.description }}</span>
               <input type="radio" class="option-input" name="description" v-model="selectedDescription" value="A" @change="updateMergedAuthorDescription('A')" />
             </label>
-<!--            <label v-for="(alias, index) in authorA.alias" :key="index">-->
-<!--              <span>Alias: {{ alias.name || alias }}</span>-->
-<!--              <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)" />-->
-<!--            </label>-->
-            <!--TODO: just for TEST, add v-for like the upper label to this ul-->
             <span>Alias(Multiple options): </span>
-            <ul class="alias-tags">
-              <li>
-                <!-- TODO: add attributes to input tag like the upper input-->
-                <!-- TODO: replace demo with {{alias.name}} in below label-->
-                <label>
-                  <input type="checkbox" name="alias"/>
-                  <div class="alias-tag">Demo</div>
-                </label>
-              </li>
+            <ul class="alias-tags" v-for="(alias, index) in authorA.alias" :key="index">
               <li>
                 <label>
-                  <input type="checkbox" name="alias"/>
-                  <div class="alias-tag">Demo2</div>
-                </label>
-              </li>
-              <li>
-                <label>
-                  <input type="checkbox" name="alias"/>
-                  <div class="alias-tag">Demo3-Looong</div>
+                  <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)"/>
+                  <div class="alias-tag"> {{alias.name}} </div>
                 </label>
               </li>
             </ul>
-
           </div>
         </div>
 
@@ -66,16 +45,15 @@
               <covers-author-image :author="mergedAuthor" :default-image="defaultImage" />
             </div>
             <div class="author-info">
-              <p>Name: {{ mergedAuthor.name }}</p>
-              <p>ASIN: {{ mergedAuthor.asin }}</p>
-              <p>Description: {{ mergedAuthor.description }}</p>
-              <p>Alias: {{ mergedAuthor.alias.join(', ') }}</p>
+              <p id="author-info-name"><strong>Name:</strong> {{ mergedAuthor.name }}</p>
+              <p><strong>ASIN:</strong> {{ mergedAuthor.asin }}</p>
+              <p><strong>Description:</strong> {{ mergedAuthor.description }}</p>
+              <p><strong>Alias:</strong> {{ mergedAuthor.alias.join(', ') }}</p>
             </div>
           </div>
         </div>
 
         <div class="author-section author-right">
-          <h3>{{ authorB.name }}</h3>
           <div class="author-details">
             <label class="image-label">
               <input type="radio" class="option-input" name="image" v-model="selectedImage" value="B" @change="updateMergedAuthorImage('B')" />
@@ -85,28 +63,32 @@
             </label>
             <label>
               <input type="radio" class="option-input" name="name" v-model="selectedAuthor" value="B" @change="updateMergedAuthorName('B')" />
-              Name: {{ authorB.name }}
+              <span>Name: {{ authorB.name }}</span>
             </label>
             <label>
               <input type="radio" class="option-input" name="asin" v-model="selectedASIN" value="B" @change="updateMergedAuthorASIN('B')" />
-              ASIN: {{ authorB.asin }}
+              <span>ASIN: {{ authorB.asin }}</span>
             </label>
             <label>
               <input type="radio" class="option-input" name="description" v-model="selectedDescription" value="B" @change="updateMergedAuthorDescription('B')" />
-              Description: {{ authorB.description }}
+              <span>Description: {{ authorB.description }}</span>
             </label>
-            <label v-for="(alias, index) in authorB.alias" :key="index">
-              <input type="checkbox" :name="'aliasB' + index" v-model="selectedAliasB[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('B', index)" />
-              Alias: {{ alias.name || alias }}
-            </label>
+            <span>Alias(Multiple options): </span>
+            <ul class="alias-tags" v-for="(alias, index) in authorB.alias" :key="index">
+              <li>
+                <label>
+                  <input type="checkbox" :name="'aliasB' + index" v-model="selectedAliasB[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('B', index)"/>
+                  <div class="alias-tag"> {{alias.name}} </div>
+                </label>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
 
       <div class="modal-actions">
-        <!--TODO: add merge function to merge button-->
-        <button class="btn btn-primary">Merge</button>
-        <button class="btn btn-secondary" @click="close">Cancel</button>
+        <ui-btn type="button" color="success" class="m-3" @click="mergeAuthors">Merge</ui-btn>
+        <ui-btn type="button" @click="close" class="m-3">Cancel</ui-btn>
       </div>
 
     </div>
@@ -234,31 +216,6 @@ export default {
         console.error('Merge error:', error)
       }
     },
-    async handleAction(action) {
-      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
-      try {
-        if (action === 'mergeAuthors') {
-          await this.mergeAuthors()
-          await this.clearNotifications(metadata.notificationId)
-        } else if (action === 'mergeAliasesToB') {
-          if (!this.authorB.is_alias_of) {
-            await this.makeAlias('AtoB')
-            await this.clearNotifications(metadata.notificationId)
-          } else {
-            this.$toast.error('Cannot make an alias of an author who is already an alias')
-          }
-        } else if (action === 'mergeAliasesToA') {
-          if (!this.authorA.is_alias_of) {
-            await this.makeAlias('BtoA')
-            await this.clearNotifications(metadata.notificationId)
-          } else {
-            this.$toast.error('Cannot make an alias of an author who is already an alias')
-          }
-        }
-      } catch (error) {
-        console.error('Error handling action:', error)
-      }
-    },
     async clearNotifications(notificationId) {
       try {
         const token = this.userToken
@@ -329,11 +286,19 @@ export default {
 
 .author-section,
 .merged-author-section {
-  text-align: center;
   background-color: rgba(207, 207, 207, 0.1);
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
+}
+
+.merged-author-section {
+  min-height: 400px;
+}
+
+.author-section {
+  height: 370px;
+  overflow: auto;
 }
 
 .author-left .author-details {
@@ -359,6 +324,7 @@ export default {
 .author-left .author-details label span {
   flex-grow: 1;
   text-align: left;
+  max-width: 85%;
 }
 
 .author-left .author-details input {
@@ -366,6 +332,7 @@ export default {
 }
 
 .author-right .author-details label span {
+  max-width: 85%;
   flex-grow: 1;
   text-align: right;
 }
@@ -376,7 +343,7 @@ export default {
 
 .merged-author-section .author-details {
   display: flex;
-  align-items: center;
+  align-items: start;
   gap: 10px;
 }
 
@@ -388,16 +355,23 @@ export default {
 
 .merged-author-section .author-image-container {
   width: 150px;
-  height: 150px;
+  height: 180px;
   flex: 0 0 auto;
 }
 
 .author-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
 }
 
 .author-info p {
   padding: 5px;
+  font-size: 17px;
+}
+
+#author-info-name {
   font-size: 20px;
 }
 
@@ -407,32 +381,6 @@ export default {
   padding-top: 10px;
   border-top: 1px solid #333;
   position: relative;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.btn-primary {
-  background-color: #2563eb;
-  color: #ffffff;
-}
-
-.btn-primary:hover {
-  background-color: #1d4ed8;
-}
-
-.btn-secondary {
-  background-color: #6b7280;
-  color: #ffffff;
-  margin-left: 10px;
-}
-
-.btn-secondary:hover {
-  background-color: #4b5563;
 }
 
 .author-image-container {
@@ -515,6 +463,13 @@ ul {
   padding: 10px;
   width: 100%;
 }
+
+.author-right ul {
+  justify-content: flex-end;
+  align-items: flex-end;
+  align-content: flex-end;
+}
+
 ul li {
   list-style: none;
   text-align: center;

@@ -11,7 +11,7 @@
           </div>
           <div class="flex justify-center space-x-4 w-full mt-4">
             <button class="btn btn-primary" @click="showMergeModal(authorPair)">Merge</button>
-            <button class="btn btn-secondary" @click="showMakeAliasModal(authorPair)">Make Alias</button>
+            <button class="btn btn-primary" @click="showMakeAliasModal(authorPair)">Make Alias</button>
             <button class="btn btn-secondary" @click="cancelNotification(authorPair)">Cancel</button>
           </div>
         </div>
