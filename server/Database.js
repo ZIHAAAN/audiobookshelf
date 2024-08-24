@@ -704,6 +704,12 @@ class Database {
     if (!this.libraryFilterData[libraryId]) {
       return (await this.authorModel.getOldByNameAndLibrary(authorName, libraryId))?.id || null
     }
+    return this.libraryFilterData[libraryId].authors.find((au) => au.name === authorName)?.id || null
+  }
+  async getPossibleAuthorIdByName(libraryId, authorName) {
+    if (!this.libraryFilterData[libraryId]) {
+      return (await this.authorModel.getPossibleOldByNameAndLibrary(authorName, libraryId))?.id || null
+    }
     return this.libraryFilterData[libraryId].authors.find((au) => au.name.replace(/[\s.]+/g, '').toLowerCase() === authorName.replace(/[\s.]+/g, '').toLowerCase())?.id || null
   }
   async getAuthorAliasIdByName(libraryId, authorName) {

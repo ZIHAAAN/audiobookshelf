@@ -476,15 +476,13 @@ class BookScanner {
       bookAuthors: [],
       bookSeries: []
     }
-    //const newAuthors = []
     if (bookMetadata.authors.length) {
       for (const authorName of bookMetadata.authors) {
         const matchingAuthorId = await Database.getAuthorIdByName(libraryItemData.libraryId, authorName) //Query the standardized author name
         const alias = await Database.getAuthorAliasIdByName(libraryItemData.libraryId, authorName)
         //const matchingPenAuthor = await Database.getAuthorIdByPenName(libraryItemData.libraryId, authorName.replace(/\s+/g, '').toLowerCase())
 
-        if (alias === null || alias.length === 0) {
-        } else {
+        if (alias !== null && alias.length !== 0) {
           const author = await Database.authorModel.getOldById(matchingAuthorId)
           const aliasAuthor = await Database.authorModel.getOldById(alias)
 
@@ -514,26 +512,34 @@ class BookScanner {
           bookObject.bookAuthors.push({
             author: {
               libraryId: libraryItemData.libraryId,
-
               name: authorName,
-              lastFirst: parseNameString.nameToLastFirst(authorName) //Standardize author names
+              lastFirst: parseNameString.nameToLastFirst(authorName)
               // zih/master
             }
           })
-          // if (matchingPenAuthor) {
-          //   penNameConfirmation.push({
-          //     bookTitle: bookMetadata.title,
-          //     authorName: authorName,
-          //     libraryId: libraryItemData.libraryId,
-          //     possibleAuthorId: matchingPenAuthor.id,
-          //     possibleAuthorName: matchingPenAuthor.name
-          //   })
-          //   newAuthors.push({
-          //     libraryId: libraryItemData.libraryId,
-          //     name: authorName,
-          //     lastFirst: parseNameString.nameToLastFirst(authorName)
-          //   })
-          // }
+          const possibleAuthorId = await Database.getPossibleAuthorIdByName(libraryItemData.libraryId, authorName)
+          if (possibleAuthorId) {
+            let notificationId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
+            if (!bookMetadata.notificationIds) {
+              bookMetadata.notificationIds = []
+            }
+            bookMetadata.notificationIds.push(notificationId)
+            const possibleAuthor = await Database.authorModel.getOldById(possibleAuthorId)
+            const newNotification = {
+              notificationId: notificationId,
+              time: new Date().toISOString(),
+              category: 'Possible Author',
+              bookTitle: bookMetadata.title,
+              author: null,
+              possibleAuthor: possibleAuthor,
+              //No aliasAuthor,
+              read: false,
+              handled: false
+            }
+            const dbUser = await Database.userModel.getUserById(userId)
+            dbUser.notifications.push(newNotification)
+            await Database.userModel.updateFromOld(dbUser)
+          }
         }
       }
     }
@@ -663,6 +669,26 @@ class BookScanner {
       libraryItem.changed('libraryFiles', true)
       await libraryItem.save()
     }
+    if (bookMetadata.notificationIds) {
+      for (let i = 0; i < bookMetadata.notificationIds.length; i++) {
+        const notificationId = bookMetadata.notificationIds[i]
+        const authorName = bookMetadata.authors[i]
+        const matchingAuthorId = await Database.getAuthorIdByName(libraryItemData.libraryId, authorName)
+        const author = await Database.authorModel.getOldById(matchingAuthorId)
+        const dbUser = await Database.userModel.getUserById(userId)
+        dbUser.notifications = dbUser.notifications.map((notification) => {
+          if (notification.notificationId === notificationId) {
+            return {
+              ...notification,
+              author: author
+            }
+          }
+          return notification
+        })
+        await Database.userModel.updateFromOld(dbUser)
+      }
+    }
+
     // for (const newAuthor of newAuthors) {
     //   const newAuthorId = await Database.getAuthorIdByName(newAuthor.libraryId, newAuthor.name)
     //   for (const penNameItem of penNameConfirmation) {

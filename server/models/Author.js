@@ -124,24 +124,32 @@ class Author extends Model {
     )?.getOldAuthor()
     return author
   }
-  /**
-   * Get author by penName in relation field. Case insensitive
-   *
-   * @param {string} penName
-   * @param {string} libraryId
-   * @returns {Promise<Author>}
-   */
-  // static async getOldByPenNameAndLibrary(authorPenName, libraryId) {
-  //   const authors = await this.findAll({
-  //     where: {
-  //       libraryId,
-  //       [Op.and]: sequelize.literal(`json_extract(lower(relation), '$.alians.${authorPenName.toLowerCase()}') IS NOT NULL`)
-  //     }
-  //   })
 
-  //   return authors.map((author) => author.getOldAuthor())
-  // }
   /**
+   * Get old author by name and libraryId. Matches author name loosely
+   * by ignoring spaces, punctuation, and case.
+   *
+   * @param {string} authorName
+   * @param {string} libraryId
+   * @returns {Promise<oldAuthor>}
+   */
+  static async getPossibleOldByNameAndLibrary(authorName, libraryId) {
+    // Remove spaces, dots, and lowercase the author name
+    const normalizedAuthorName = authorName.replace(/[\s.]+/g, '').toLowerCase()
+
+    const author = (
+      await this.findOne({
+        where: [
+          where(fn('lower', fn('replace', fn('replace', col('name'), ' ', ''), '.', '')), normalizedAuthorName),
+          {
+            libraryId
+          }
+        ]
+      })
+    )?.getOldAuthor()
+
+    return author
+  }
 
   /**
    *
