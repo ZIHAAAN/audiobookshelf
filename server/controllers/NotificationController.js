@@ -73,14 +73,26 @@ class NotificationController {
   }
   async clearNotifications(req, res) {
     try {
+      console.log('User ID:', req.user.id)
+      console.log('Notification ID:', req.query.notificationId)
       const dbUser = await Database.userModel.getUserById(req.user.id)
+      if (!dbUser) {
+        console.error('User not found')
+        return res.status(404).send('User not found')
+      }
       const notification = dbUser.notifications.find((notification) => notification.notificationId === req.query.notificationId)
+
+      if (!notification) {
+        console.error('Notification not found')
+        return res.status(404).send('Notification not found')
+      }
+
       // if find
       if (notification) {
         notification.handled = true
       }
       //save database
-      await dbUser.save()
+      await Database.userModel.updateFromOld(dbUser)
       res.sendStatus(200)
     } catch (error) {
       console.error('Error clearing notifications:', error)

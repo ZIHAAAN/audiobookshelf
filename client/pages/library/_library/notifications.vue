@@ -5,9 +5,9 @@
 
       <p class="text-center mb-6">The following authors are detected as similar. Do you want to merge them?</p>
       <div class="grid grid-cols-1 gap-4 justify-center">
-        <div v-for="(authorPair, index) in authorPairs" :key="index" :class="['notification', authorPair[0].handled && authorPair[1].handled ? 'read' : 'unread']" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
+        <div v-for="(authorPair, index) in authorPairs" :key="index" :class="['notification', authorPair.metadata.handled ? 'read' : 'unread']" class="notification bg-card p-4 rounded-lg shadow-lg flex flex-col items-center w-full">
           <div class="flex justify-between items-center w-full mb-4 author-container">
-            <AuthorCard v-for="author in authorPair" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
+            <AuthorCard v-for="author in [authorPair.authorA, authorPair.authorB]" :key="author.id" :author="author" :width="cardWidth" :height="cardHeight" @edit="editAuthor" />
           </div>
           <!--     <div>
             {{ authorPair.id }}
@@ -24,7 +24,7 @@
         </div>
       </div>
     </div>
-    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair[0]" :authorB="selectedAuthorPair[1]" @close="closeMergeModal" @merge="handleMerge" />
+    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :metadata="selectedAuthorPair.metadata" @close="closeMergeModal" @merge="handleMerge" />
   </div>
 </template>
 
@@ -64,8 +64,7 @@ export default {
             imagePath: notification.author.imagePath,
             alias: [],
             libraryId: notification.author.libraryId,
-            is_alias_of: notification.author.is_alias_of,
-            handled: notification.handled || false
+            is_alias_of: notification.author.is_alias_of
           }
 
           const authorB = {
@@ -76,8 +75,7 @@ export default {
             imagePath: notification.aliasAuthor.imagePath,
             alias: [],
             libraryId: notification.aliasAuthor.libraryId,
-            is_alias_of: notification.aliasAuthor.is_alias_of,
-            handled: notification.handled || false
+            is_alias_of: notification.aliasAuthor.is_alias_of
           }
 
           // 获取作者 A 的别名
@@ -98,7 +96,16 @@ export default {
             })
           }
 
-          return [authorA, authorB]
+          // 将每对作者的数据以数组形式返回
+          return {
+            authorA,
+            authorB,
+            metadata: {
+              handled: notification.handled || false,
+              read: notification.read || false,
+              notificationId: notification.notificationId // 添加通知ID，便于后续操作
+            }
+          }
         })
       )
 
@@ -128,7 +135,10 @@ export default {
 
   computed: {
     hasUnreadNotifications() {
-      return this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
+      return this.authorPairs.some((pair) => {
+        const handled = pair?.metadata?.handled
+        return !handled
+      })
     },
     userToken() {
       return this.$store.getters['user/getToken']
@@ -166,8 +176,7 @@ export default {
               imagePath: notification.author.imagePath,
               alias: [],
               libraryId: notification.author.libraryId,
-              is_alias_of: notification.author.is_alias_of,
-              handled: notification.handled || false
+              is_alias_of: notification.author.is_alias_of
             }
 
             const authorB = {
@@ -178,8 +187,7 @@ export default {
               imagePath: notification.aliasAuthor.imagePath,
               alias: [],
               libraryId: notification.aliasAuthor.libraryId,
-              is_alias_of: notification.aliasAuthor.is_alias_of,
-              handled: notification.handled || false
+              is_alias_of: notification.aliasAuthor.is_alias_of
             }
 
             if (!authorA.is_alias_of) {
@@ -190,7 +198,15 @@ export default {
               authorB.alias = await this.fetchAuthorAlias(authorB.id)
             }
 
-            return [authorA, authorB]
+            return {
+              authorA,
+              authorB,
+              metadata: {
+                handled: notification.handled || false,
+                read: notification.read || false,
+                notificationId: notification.notificationId // 添加通知ID，便于后续操作
+              }
+            }
           })
         )
 
@@ -220,6 +236,11 @@ export default {
     },
 
     showMergeModal(authorPair) {
+      if (!authorPair || !authorPair.authorA || !authorPair.authorB || !authorPair.metadata) {
+        console.error('Invalid authorPair data:', authorPair)
+        return
+      }
+      console.log('selectedAuthorPair.metadata:', authorPair.metadata)
       this.selectedAuthorPair = authorPair
       this.isMergeModalVisible = true
     },
@@ -229,13 +250,13 @@ export default {
       this.selectedAuthorPair = null
     },
 
-    async handleMerge(mergedAuthor) {
-      this.selectedAuthorPair.forEach((author) => {
-        author.handled = true
-      })
+    async handleMerge() {
+      const localMetadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      this.selectedAuthorPair.metadata.handled = true
 
       this.authorPairs = [...this.authorPairs]
-      await this.clearNotification(this.selectedAuthorPair[0].id) // 调用清除通知的 API
+
+      await this.clearNotifications(localMetadata.notificationId) // 调用清除通知的 API
       this.isMergeModalVisible = false
       this.updateGlobalNotificationsState()
     },
@@ -250,14 +271,9 @@ export default {
     },
 
     async cancelNotification(authorPairToCancel) {
-      this.authorPairs = this.authorPairs.filter((pair) => pair !== authorPairToCancel)
+      const localMetadata = authorPairToCancel.metadata ? JSON.parse(JSON.stringify(authorPairToCancel.metadata)) : {}
+      this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== localMetadata.notificationId)
       this.updateGlobalNotificationsState()
-    },
-
-    updateGlobalNotificationsState() {
-      const hasUnread = this.authorPairs.some((pair) => !pair[0].handled || !pair[1].handled)
-      this.$store.commit('setHasUnreadNotifications', hasUnread)
-      this.$forceUpdate()
     },
 
     mouseover(index) {

@@ -95,7 +95,7 @@
             <div class="author-image-container">
               <covers-author-image :author="authorA" :default-image="defaultImage" />
             </div>
-            <button class="btn btn-make-alias mt-2" @click="handleAction('mergeAliasesToB')">Make A to B's Alias</button>
+            <button class="btn btn-make-alias mt-2" @click="() => handleAction('mergeAliasesToB')">Make A to B's Alias</button>
           </div>
 
           <div class="author-section">
@@ -103,13 +103,13 @@
             <div class="author-image-container">
               <covers-author-image :author="authorB" :default-image="defaultImage" />
             </div>
-            <button class="btn btn-make-alias mt-2" @click="handleAction('mergeAliasesToA')">Make B to A's Alias</button>
+            <button class="btn btn-make-alias mt-2" @click="() => handleAction('mergeAliasesToA')">Make B to A's Alias</button>
           </div>
         </div>
 
         <!-- cancel button-->
         <div class="modal-actions">
-          <button v-if="activeTab === 'merge'" class="btn btn-primary" @click="handleAction('mergeAuthors')">Merge</button>
+          <button v-if="activeTab === 'merge'" class="btn btn-primary" @click="() => handleAction('mergeAuthors')">Merge</button>
           <button class="btn btn-secondary" @click="close">Cancel</button>
         </div>
       </div>
@@ -130,6 +130,10 @@ export default {
       required: true
     },
     authorB: {
+      type: Object,
+      required: true
+    },
+    metadata: {
       type: Object,
       required: true
     }
@@ -161,7 +165,9 @@ export default {
     }
   },
   mounted() {
+    console.log('Received metadata:', this.metadata)
     this.setDefaultAuthor()
+    this.swapAuthorIds() //exchange ID
   },
   methods: {
     setDefaultAuthor() {
@@ -175,10 +181,21 @@ export default {
       for (let index = 0; index < this.authorA.alias.length; index++) {
         this.updateMergedAuthorAlias(this.selectedAuthor, index)
       }
+    }, //exchange author id
+    swapAuthorIds() {
+      const tempId = this.authorA.id
+      this.authorA.id = this.authorB.id
+      this.authorB.id = tempId
     },
     updateMergedAuthorName(author) {
-      this.mergedAuthor.name = author === 'A' ? this.authorA.name : this.authorB.name
-      this.mergedAuthor.id = author === 'A' ? this.authorA.id : this.authorB.id // 更新 id
+      // 在这里交换作者的 ID
+      if (author === 'A') {
+        this.mergedAuthor.name = this.authorA.name
+        this.mergedAuthor.id = this.authorB.id // 使用 authorB 的 ID 以确保合并时删除 authorB
+      } else {
+        this.mergedAuthor.name = this.authorB.name
+        this.mergedAuthor.id = this.authorA.id // 使用 authorA 的 ID 以确保合并时删除 authorA
+      }
     },
     updateMergedAuthorImage(author) {
       this.mergedAuthor.imagePath = author === 'A' ? this.authorA.imagePath : this.authorB.imagePath
@@ -255,24 +272,26 @@ export default {
       }
     },
     async mergeAuthors() {
-      console.log('Merging authors')
-      console.log('Author A:', this.authorA)
-      console.log('Author B:', this.authorB)
-      console.log('Merged Author:', this.mergedAuthor)
-
-      // 打印日志，查看 Payload 和 ID
-      console.log('Payload before sending:', {
-        id: this.mergedAuthor.id,
-        name: this.mergedAuthor.name,
-        asin: this.mergedAuthor.asin,
-        description: this.mergedAuthor.description,
-        alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])],
-        is_alias_of: null
-      })
-      console.log('Selected Author A ID:', this.authorA.id)
-      console.log('Selected Author B ID:', this.authorB.id)
-      console.log('Merged Author ID:', this.mergedAuthor.id)
-      console.log('Merged Author Name:', this.mergedAuthor.name)
+      // console.log('Merging authors')
+      // console.log('Author A:', this.authorA)
+      // console.log('Author B:', this.authorB)
+      //const metadata = this.metadata // 假设 metadata 是通过 props 传入的
+      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      console.log("---mergeAuthors'metadata-----------", metadata)
+      console.log('Notification ID:', metadata.notificationId)
+      // // 打印日志，查看 Payload 和 ID
+      // console.log('Payload before sending:', {
+      //   id: this.mergedAuthor.id,
+      //   name: this.mergedAuthor.name,
+      //   asin: this.mergedAuthor.asin,
+      //   description: this.mergedAuthor.description,
+      //   alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])],
+      //   is_alias_of: null
+      // })
+      // console.log('Selected Author A ID:', this.authorA.id)
+      // console.log('Selected Author B ID:', this.authorB.id)
+      // console.log('Merged Author ID:', this.mergedAuthor.id)
+      // console.log('Merged Author Name:', this.mergedAuthor.name)
 
       try {
         const token = this.userToken
@@ -283,7 +302,8 @@ export default {
         // 设置请求体
         const payload = {
           id: this.mergedAuthor.id, // 添加合并后的 id
-          name: this.authorA.name, // 故意设置为authorA的名字，触发合并逻辑
+          //  name: this.authorA.name, // 故意设置为authorA的名字，触发合并逻辑
+          name: this.mergedAuthor.name,
           asin: this.mergedAuthor.asin,
           description: this.mergedAuthor.description,
           alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])], // 合并两个作者的别名
@@ -297,7 +317,7 @@ export default {
         console.log('Merge successful:', response.data)
 
         this.$toast.success('Authors merged successfully')
-        this.$emit('merge', response.data)
+        this.$emit('merge', metadata) // 触发 'merge' 事件，并传递 metadata
         this.close()
       } catch (error) {
         this.$toast.error('Failed to merge authors')
@@ -305,26 +325,33 @@ export default {
       }
     },
     async handleAction(action) {
-      if (action === 'mergeAuthors') {
-        await this.mergeAuthors()
-        await this.clearNotification(this.selectedAuthorPair[0].id) // clearNotification API
-      } else if (action === 'mergeAliasesToB') {
-        if (!this.authorB.is_alias_of) {
-          await this.makeAlias('AtoB')
-          await this.clearNotification(this.selectedAuthorPair[0].id)
-        } else {
-          this.$toast.error('Cannot make an alias of an author who is already an alias')
+      // const metadata = this.metadata
+      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      console.log('-------metadata----------', metadata)
+      try {
+        if (action === 'mergeAuthors') {
+          await this.mergeAuthors()
+          await this.clearNotifications(metadata.notificationId) // clearNotification API
+        } else if (action === 'mergeAliasesToB') {
+          if (!this.authorB.is_alias_of) {
+            await this.makeAlias('AtoB')
+            await this.clearNotifications(metadata.notificationId)
+          } else {
+            this.$toast.error('Cannot make an alias of an author who is already an alias')
+          }
+        } else if (action === 'mergeAliasesToA') {
+          if (!this.authorA.is_alias_of) {
+            await this.makeAlias('BtoA')
+            await this.clearNotifications(metadata.notificationId)
+          } else {
+            this.$toast.error('Cannot make an alias of an author who is already an alias')
+          }
         }
-      } else if (action === 'mergeAliasesToA') {
-        if (!this.authorA.is_alias_of) {
-          await this.makeAlias('BtoA')
-          await this.clearNotification(this.selectedAuthorPair[0].id)
-        } else {
-          this.$toast.error('Cannot make an alias of an author who is already an alias')
-        }
+      } catch (error) {
+        console.error('Error handling action:', error)
       }
     },
-    async clearNotification(notificationId) {
+    async clearNotifications(notificationId) {
       try {
         const token = this.userToken
         await this.$axios.get('/api/clearNotifications', {
@@ -333,14 +360,24 @@ export default {
           },
           params: { notificationId }
         })
+        console.log('Notification ID being sent:', notificationId)
+        // 在调用 filter 之前确保 this.authorPairs 已初始化为一个数组
+        this.authorPairs = this.authorPairs || []
+
         // 移除处理过的通知
-        this.authorPairs = this.authorPairs.filter((pair) => pair[0].id !== notificationId && pair[1].id !== notificationId)
+        this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== notificationId)
         this.updateGlobalNotificationsState()
       } catch (error) {
         console.error('Failed to clear notification:', error)
       }
     },
+    updateGlobalNotificationsState() {
+      const hasUnread = this.authorPairs.some((pair) => !pair.metadata.handled)
+      this.$store.commit('setHasUnreadNotifications', hasUnread)
+      this.$forceUpdate()
+    },
     close() {
+      console.log('Modal close triggered')
       this.$emit('close')
     }
   }

@@ -138,6 +138,9 @@ export const mutations = {
     state.hasNotifications = notifications.length > 0
     console.log('Updated notifications:', state.notifications)
   },
+  updateNotificationReadStatus(state, { index, isRead }) {
+    state.globals.notifications[index].isRead = isRead
+  },
   setHasUnreadNotifications(state, status) {
     state.hasUnreadNotifications = status
   },
