@@ -260,6 +260,7 @@ export default {
       //return this.$store.state.globals.notifications
       const notifications = this.$store.state.globals.notifications
       this.isNotification = notifications.some((notification) => !notification.isRead)
+
       return notifications
     },
 

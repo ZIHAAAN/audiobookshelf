@@ -3,7 +3,6 @@
     <div class="modal-container">
       <h2 class="modal-title">Make Alias</h2>
       <div class="author-sections">
-
         <div class="author-left">
           <div class="author-details">
             <div class="author-image-container">
@@ -16,9 +15,8 @@
               <p class="alias-text"><strong>Alias:</strong> {{ authorB.name }}</p>
             </div>
           </div>
-          <ui-btn type="button" color="success" class="mt-5" @click="makeAlias('AtoB')">Make {{authorB.name}} as {{authorA.name}}'s alias</ui-btn>
+          <ui-btn type="button" color="success" class="mt-5" @click="makeAlias('AtoB')">Make {{ authorB.name }} as {{ authorA.name }}'s alias</ui-btn>
         </div>
-
 
         <div class="author-right">
           <div class="author-details">
@@ -32,7 +30,7 @@
               <covers-author-image :author="authorB" :default-image="defaultImage" />
             </div>
           </div>
-          <ui-btn type="button" color="success" class="mt-5" @click="makeAlias('AtoB')">Make {{authorA.name}} as {{authorB.name}}'s alias</ui-btn>
+          <ui-btn type="button" color="success" class="mt-5" @click="makeAlias('AtoB')">Make {{ authorA.name }} as {{ authorB.name }}'s alias</ui-btn>
         </div>
       </div>
 
@@ -68,11 +66,12 @@ export default {
     return {
       selectedAuthor: 'A',
       mergedAuthor: {
-        name: '',
-        imagePath: '',
-        asin: '',
-        description: '',
-        alias: []
+        name: this.authorA.name,
+        imagePath: this.authorA.imagePath,
+        asin: this.authorA.asin,
+        description: this.authorA.description,
+        alias: [],
+        id: this.authorB.id
       },
       selectedImage: 'A',
       selectedASIN: 'A',
@@ -88,8 +87,8 @@ export default {
     }
   },
   mounted() {
-    this.setDefaultAuthor()
-    this.swapAuthorIds()
+    // this.setDefaultAuthor()
+    // this.swapAuthorIds()
   },
   methods: {
     async makeAlias(direction) {
@@ -146,12 +145,17 @@ export default {
         console.error('Make alias error:', error)
       }
     },
-
     close() {
-      this.$emit('close');
+      // if (this.selectedAuthorPair && this.selectedAuthorPair.metadata && this.selectedAuthorPair.metadata.notificationId) {
+      //   const notificationId = this.selectedAuthorPair.metadata.notificationId
+      //   this.clearNotifications(notificationId)
+      // }
+      this.isMakeAliasModalVisible = false
+      this.selectedAuthorPair = null
+      this.$emit('close')
     }
   }
-};
+}
 </script>
 
 <style scoped>
