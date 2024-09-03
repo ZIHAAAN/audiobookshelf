@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="close">
     <div class="modal-container">
       <h2 class="modal-title">Merge Authors</h2>
-      <p v-if="metadata.category === 'Possible Author'" class="possible-author-message">You are dealing with a Possible Similar Author</p>
+      <p v-if="isPossibleAuthor" class="possible-author-message">You are dealing with a Possible Similar Author</p>
       <div class="merge-layout">
         <div class="author-section author-left">
           <div class="author-details">
@@ -114,9 +114,21 @@ export default {
       type: Object,
       required: true
     },
-    metadata: {
-      type: Object,
+    // metadata: {
+    //   type: Object,
+    //   required: true
+    // }
+    isPossibleAuthor: {
+      type: Boolean,
       required: true
+    },
+    notificationId: {
+      type: String,
+      required: false // 不是必须的
+    },
+    shouldClearNotification: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -200,14 +212,14 @@ export default {
       // this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])]
     },
     async mergeAuthors() {
-      const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
-      console.log('Notification ID:', metadata.notificationId)
+      // const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
+      // console.log('Notification ID:', metadata.notificationId)
 
-      console.log('Notification ID before clearing:', metadata.notificationId)
-      if (!metadata.notificationId) {
-        console.error('Notification ID is missing, cannot proceed with merge')
-        return
-      }
+      // console.log('Notification ID before clearing:', metadata.notificationId)
+      // if (!metadata.notificationId) {
+      //   console.error('Notification ID is missing, cannot proceed with merge')
+      //   return
+      // }
       try {
         const token = this.userToken
         console.log('this.userToken', this.userToken)
@@ -220,7 +232,7 @@ export default {
           name: this.mergedAuthor.name,
           asin: this.mergedAuthor.asin,
           description: this.mergedAuthor.description,
-          alias: [...new Set([...this.authorA.alias, ...this.authorB.alias])],
+          alias: [...new Set([...(this.authorA.alias || []), ...(this.authorB.alias || [])])].filter(Boolean),
           is_alias_of: null
         }
 
@@ -232,8 +244,12 @@ export default {
         this.$toast.success('Authors merged successfully')
 
         //await this.clearNotifications(metadata.notificationId)
-
-        this.$emit('merge', metadata)
+        // if (this.shouldClearNotification && this.notificationId) {
+        //   console.log('Clearing notification ID:', this.notificationId)
+        //   await this.clearNotifications(this.notificationId)
+        // }
+        this.$emit('merge', this.notificationId)
+        // this.$emit('merge', metadata)
         this.close()
       } catch (error) {
         this.$toast.error('Failed to merge authors')
@@ -511,5 +527,9 @@ ul li label .alias-tag {
   justify-content: center;
   align-items: center;
   border-radius: 5px;
+}
+.possible-author-message {
+  color: #3145da;
+  display: block;
 }
 </style>

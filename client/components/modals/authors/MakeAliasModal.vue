@@ -56,10 +56,6 @@ export default {
     authorB: {
       type: Object,
       required: true
-    },
-    metadata: {
-      type: Object,
-      required: true
     }
   },
   data() {
