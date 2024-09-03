@@ -26,6 +26,11 @@
             </ui-tooltip>
           </div>
 
+          <!-- Radio button -->
+          <div cy-id="selectedRadioButton" class="absolute cursor-pointer hover:text-yellow-300 hover:scale-125 transform duration-100" :style="{ bottom: 0.375 + 'em', right: 0.375 + 'em' }" @click.stop.prevent="selectBtnClick">
+            <span class="material-symbols" :class="selected ? 'text-yellow-400' : ''" :style="{ fontSize: 1.25 + 'em' }">{{ selected ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
+          </div>
+
           <!-- Loading spinner -->
           <div cy-id="spinner" v-show="searching" class="absolute top-0 left-0 z-10 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
             <widgets-loading-spinner size="" />
@@ -59,7 +64,8 @@ export default {
   data() {
     return {
       searching: false,
-      isHovering: false
+      isHovering: false,
+      selected: false
     }
   },
   computed: {
@@ -106,6 +112,11 @@ export default {
     },
     mouseleave() {
       this.isHovering = false
+    },
+    selectBtnClick(evt) {
+      if (this.processingBatch) return
+      this.selected = !this.selected
+      this.$emit('select', { author: this.author, isSelected: this.selected })
     },
     async searchAuthor() {
       this.searching = true

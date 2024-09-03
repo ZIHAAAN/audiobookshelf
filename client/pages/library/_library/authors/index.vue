@@ -3,35 +3,39 @@
     <app-book-shelf-toolbar page="authors" is-home :authors="authors" />
     <div id="bookshelf" class="w-full h-full p-8e overflow-y-auto" :style="{ fontSize: sizeMultiplier + 'rem' }">
       <!-- Cover size widget -->
+
       <widgets-cover-size-widget class="fixed right-4 z-50" :style="{ bottom: streamLibraryItem ? '181px' : '16px' }" />
-      <div class="flex justify-end p-4">
-        <button class="btn" :class="mergeButtonClass" @click="showMergeModal" :disabled="selectedAuthors.length !== 2">Merge</button>
-      </div>
       <div class="flex flex-wrap justify-center">
+        <div v-if="selectedAuthors.length > 0" class="select-bar w-full p-2 text-white flex justify-between items-center">
+          <span>{{ selectedAuthors.length }} Authors Selected</span>
+          <div>
+            <ui-btn type="button" :class="mergeButtonClass" @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
+            <ui-btn type="button" :class="makeAliasButtonClass" @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
+          </div>
+        </div>
         <template v-for="author in authorsSorted">
           <div class="author-card-container p-3e">
-            <cards-author-card :key="author.id" :author="author" @edit="editAuthor" />
-            <div class="flex justify-center mt-2">
-              <input type="checkbox" v-model="selectedAuthorsMap[author.id]" @change="updateSelectedAuthors" />
-            </div>
+            <cards-author-card :key="author.id" :author="author" @edit="editAuthor" @select="handleSelect" />
           </div>
         </template>
       </div>
     </div>
 
     <edit-modal />
-    <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthors[0]" :authorB="selectedAuthors[1]" @close="closeMergeModal" @merge="handleMerge" />
+    <merge-author-modal :authorA="selectedAuthors[0]" :authorB="selectedAuthors[1]" v-if="isMergeModalVisible" @close="closeMergeModal" />
+    <make-alias-modal :authorA="selectedAuthors[0]" :authorB="selectedAuthors[1]" v-if="isMakeAliasModalVisible" @close="closeMakeAliasModal" />
   </div>
 </template>
 
 <script>
 import EditModal from '@/components/modals/authors/EditModal.vue'
+import MakeAliasModal from '@/components/modals/authors/MakeAliasModal.vue'
 import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
 
 export default {
   components: {
+    MergeAuthorModal, MakeAliasModal,
     EditModal,
-    MergeAuthorModal
   },
   async asyncData({ store, params, redirect }) {
     var libraryId = params.library
@@ -53,8 +57,10 @@ export default {
     return {
       loading: true,
       authors: [],
-      selectedAuthorsMap: {},
-      isMergeModalVisible: false
+      // selectedAuthorsMap: {},
+      selectedAuthors: [],
+      isMergeModalVisible: false,
+      isMakeAliasModalVisible: false,
     }
   },
   computed: {
@@ -67,10 +73,13 @@ export default {
     currentLibraryId() {
       return this.$store.state.libraries.currentLibraryId
     },
-    selectedAuthors() {
-      return this.authors.filter((author) => this.selectedAuthorsMap[author.id])
-    },
+    // selectedAuthors() {
+    //   return this.authors.filter((author) => this.selectedAuthorsMap[author.id])
+    // },
     mergeButtonClass() {
+      return this.selectedAuthors.length === 2 ? 'btn-primary' : 'btn-disabled'
+    },
+    makeAliasButtonClass() {
       return this.selectedAuthors.length === 2 ? 'btn-primary' : 'btn-disabled'
     },
     authorSortBy() {
@@ -122,37 +131,31 @@ export default {
       this.$store.commit('globals/showEditAuthorModal', author)
       //   })
     },
-    confirmMerge(callback) {
-      // const payload = {
-      //   message: 'Discover similar authors xxx and xxx, do you want to merge them?',
-      //   type: 'yesNo',
-      //   callback: (confirmed) => {
-      //     if (confirmed) {
-      //       console.log('Authors merged')
-      //     }
-      //     if (typeof callback === 'function') {
-      //       callback()
-      //     }
-      //   }
-      // }
-      // this.$store.commit('globals/setConfirmPrompt', payload)
-    },
-    updateSelectedAuthors() {
-      this.selectedAuthors = this.authors.filter((author) => this.selectedAuthorsMap[author.id])
-    },
-    showMergeModal() {
-      if (this.selectedAuthors.length === 2) {
-        this.isMergeModalVisible = true
+    handleSelect({ author, isSelected }) {
+      console.log("author id:" + author.id + " Select state:" + isSelected)
+      if (isSelected) {
+        if (!this.selectedAuthors.some(selectedAuthor => selectedAuthor.id === author.id)) {
+          this.selectedAuthors.push(author)
+        }
+      } else {
+        this.selectedAuthors = this.selectedAuthors.filter(selectedAuthor => selectedAuthor.id !== author.id)
       }
+      console.log(this.selectedAuthors)
+    },
+    openMergeModal() {
+      console.log("authorA:" + this.selectedAuthors[0].name)
+      console.log("authorB:" + this.selectedAuthors[1].name)
+      this.isMergeModalVisible = true
+      console.log(this.isMergeModalVisible)
     },
     closeMergeModal() {
       this.isMergeModalVisible = false
     },
-    handleMerge(mergedAuthor) {
-      //TODO: API that merge two authors
-      console.log('Merged Author:', mergedAuthor)
-      this.isMergeModalVisible = false
-      this.selectedAuthorsMap = {}
+    openMakeAliasModal() {
+      this.isMakeAliasModalVisible = true
+    },
+    closeMakeAliasModal() {
+      this.isMakeAliasModalVisible = false
     }
   },
   mounted() {
@@ -220,5 +223,9 @@ export default {
 
 .p-8e {
   padding: 2rem;
+}
+
+.select-bar {
+
 }
 </style>

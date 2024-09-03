@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="close">
     <div class="modal-container">
       <h2 class="modal-title">Merge Authors</h2>
-      <p v-if="metadata.category === 'Possible Author'" class="possible-author-message">You are dealing with a Possible Similar Author</p>
+
       <div class="merge-layout">
         <div class="author-section author-left">
           <div class="author-details">
@@ -49,10 +49,6 @@
               <p><strong>ASIN:</strong> {{ mergedAuthor.asin }}</p>
               <p><strong>Description:</strong> {{ mergedAuthor.description }}</p>
               <p><strong>Alias:</strong> {{ mergedAuthor.alias.join(', ') }}</p>
-
-              <!-- Category-based rendering -->
-              <!-- <p v-if="metadata.category === 'merge'"><strong>Alias:</strong> {{ mergedAuthor.alias.join(', ') }}</p>
-              <p v-else-if="metadata.category === 'Possible Author'"><strong>Possible Author:</strong> {{ mergedAuthor.possibleAuthors.join(', ') }}</p> -->
             </div>
           </div>
         </div>
@@ -123,12 +119,11 @@ export default {
     return {
       selectedAuthor: 'A',
       mergedAuthor: {
-        name: this.authorA.name,
-        imagePath: this.authorA.imagePath,
-        asin: this.authorA.asin,
-        description: this.authorA.description,
-        alias: [],
-        id: this.authorB.id
+        name: '',
+        imagePath: '',
+        asin: '',
+        description: '',
+        alias: []
       },
       selectedImage: 'A',
       selectedASIN: 'A',
@@ -144,15 +139,25 @@ export default {
     }
   },
   mounted() {
-    //this.setDefaultAuthor()
-    // this.swapAuthorIds()
+    this.setDefaultAuthor()
+    this.swapAuthorIds()
   },
   methods: {
-    // swapAuthorIds() {
-    //   const tempId = this.authorA.id
-    //   this.authorA.id = this.authorB.id
-    //   this.authorB.id = tempId
-    // },
+    setDefaultAuthor() {
+      this.updateMergedAuthorName(this.selectedAuthor)
+      this.updateMergedAuthorImage(this.selectedAuthor)
+      this.updateMergedAuthorASIN(this.selectedAuthor)
+      this.updateMergedAuthorDescription(this.selectedAuthor)
+
+      for (let index = 0; index < this.authorA.alias.length; index++) {
+        this.updateMergedAuthorAlias(this.selectedAuthor, index)
+      }
+    },
+    swapAuthorIds() {
+      const tempId = this.authorA.id
+      this.authorA.id = this.authorB.id
+      this.authorB.id = tempId
+    },
     updateMergedAuthorName(author) {
       if (author === 'A') {
         this.mergedAuthor.name = this.authorA.name
@@ -203,19 +208,13 @@ export default {
       const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
       console.log('Notification ID:', metadata.notificationId)
 
-      console.log('Notification ID before clearing:', metadata.notificationId)
-      if (!metadata.notificationId) {
-        console.error('Notification ID is missing, cannot proceed with merge')
-        return
-      }
       try {
         const token = this.userToken
         console.log('this.userToken', this.userToken)
         const headers = {
           Authorization: `Bearer ${token}`
         }
-
-        let payload = {
+        const payload = {
           id: this.mergedAuthor.id,
           name: this.mergedAuthor.name,
           asin: this.mergedAuthor.asin,
@@ -224,15 +223,11 @@ export default {
           is_alias_of: null
         }
 
-        console.log('----payload-----:', payload)
         console.log('Target Author ID for merge:', this.mergedAuthor.name)
         const response = await this.$axios.patch(`/api/authors/${this.mergedAuthor.id}`, payload, { headers })
         console.log('Merge successful:', response.data)
 
         this.$toast.success('Authors merged successfully')
-
-        //await this.clearNotifications(metadata.notificationId)
-
         this.$emit('merge', metadata)
         this.close()
       } catch (error) {
@@ -240,14 +235,23 @@ export default {
         console.error('Merge error:', error)
       }
     },
-
+    async clearNotifications(notificationId) {
+      try {
+        const token = this.userToken
+        await this.$axios.get('/api/clearNotifications', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          params: { notificationId }
+        })
+        console.log('Notification ID being sent:', notificationId)
+        this.authorPairs = this.authorPairs || []
+        this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== notificationId)
+      } catch (error) {
+        console.error('Failed to clear notification:', error)
+      }
+    },
     close() {
-      // if (this.selectedAuthorPair && this.selectedAuthorPair.metadata && this.selectedAuthorPair.metadata.notificationId) {
-      //   const notificationId = this.selectedAuthorPair.metadata.notificationId
-      //   this.clearNotifications(notificationId)
-      // }
-      this.isMergeModalVisible = false
-      this.selectedAuthorPair = null
       this.$emit('close')
     }
   }

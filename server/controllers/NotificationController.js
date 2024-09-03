@@ -60,17 +60,27 @@ class NotificationController {
     if (success) res.sendStatus(200)
     else res.sendStatus(500)
   }
+
   async getNotifications(req, res) {
-    const dbUser = await Database.userModel.getUserById(req.user.id)
-    res.json(dbUser.notifications)
-    if (req.query.isRead) {
-      dbUser.notifications = dbUser.notifications.map((notification) => ({
-        ...notification,
-        read: true
-      }))
-      await Database.userModel.updateFromOld(dbUser)
+    try {
+      const dbUser = await Database.userModel.getUserById(req.user.id)
+      res.json(dbUser.notifications || [])
+
+      if (req.query.isRead) {
+        if (dbUser.notifications && Array.isArray(dbUser.notifications)) {
+          dbUser.notifications = dbUser.notifications.map(notification => ({
+            ...notification,
+            read: true
+          }))
+          await Database.userModel.updateFromOld(dbUser)
+        }
+      }
+    } catch (error) {
+      console.error('Error in getNotifications:', error)
+      res.status(500)
     }
   }
+
   async clearNotifications(req, res) {
     try {
       console.log('User ID:', req.user.id)
