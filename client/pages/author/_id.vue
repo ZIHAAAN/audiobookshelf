@@ -17,16 +17,20 @@
           </div>
 
           <!-- Alias or Original Author Section -->
-          <div v-if="originalAuthor" class="mb-4">
-            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author: </p>
-            <nuxt-link :to="`/author/${originalAuthor.id}`" class="block bg-gray-800 p-2 rounded mb-2 text-white">
-              {{ originalAuthor.name }}
+          <div v-if="author.is_alias_of" class="mb-4">
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author </p>
+            <nuxt-link :to="`/author/${author.is_alias_of}`" class="alias-box inline-block p-2 rounded mb-2 text-white">
+              {{ author.originalAuthor.name }}
             </nuxt-link>
           </div>
-          <div v-else-if="aliases.length" class="mb-4">
-            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases: </p>
-            <div v-for="alias in aliases" :key="alias.id" class="bg-gray-800 p-2 rounded mb-2 text-white">
-              <nuxt-link :to="`/author/${alias.id}`" class="block">{{ alias.name }}</nuxt-link>
+          <div v-else-if="!author.is_alias_of" class="mb-4">
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases </p>
+            <div v-for="alias in author.aliases" :key="alias.id">
+              <nuxt-link :to="`/author/${alias.id}`">
+                <div class="inline-block alias-box p-2 rounded mb-2 text-white">
+                  {{ alias.name }}
+                </div>
+              </nuxt-link>
             </div>
           </div>
 
@@ -66,10 +70,15 @@ export default {
       return null
     })
 
-    // const authorAliases = await app.$axios.$get(`/api/authors/${params.id}/alias`).catch((error) => {
-    //   console.error('Failed to get aliases', error)
-    //   return []
-    // })
+    const originalAuthor = await app.$axios.$get(`/api/authors/${author.is_alias_of}?include=items,series`).catch((error) => {
+      console.error('Failed to get author', error)
+      return null
+    })
+
+    const aliases = await app.$axios.$get(`/api/authors/${params.id}/alias`).catch((error) => {
+      console.error('Failed to get aliases', error)
+      return
+    })
 
     if (!author) {
       return redirect(`/library/${store.state.libraries.currentLibraryId}/authors`)
@@ -80,9 +89,11 @@ export default {
     }
 
     return {
-      author,
-      originalAuthor: author.originalAuthor || null,
-      aliases: author.aliases || []
+      author: {
+        ...author,
+        originalAuthor: originalAuthor ||null,
+        aliases: aliases || []
+      },
     }
   },
   data() {
@@ -164,7 +175,7 @@ export default {
 }
 
 .alias-box {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(27, 27, 27, 0.6);
   color: #fff;
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;

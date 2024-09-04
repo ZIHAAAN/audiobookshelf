@@ -33,18 +33,20 @@
 
             <div v-if="authorCopy.aliases.length > 0" class="p-2">
               <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases: </p>
-              <div v-for="alias in authorCopy.aliases" :key="alias" class="flex justify-between items-center">
+              <div v-for="alias in authorCopy.aliases" :key="alias" class="flex justify-between items-center m-2">
                 <span>{{ alias.name }}</span>
-                <ui-btn color="error" small type="button" @click="removeAlias(alias)">Remove</ui-btn>
+                <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
               </div>
-              <div class="p-2">
-                <ui-text-input v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                <ui-btn class="mt-2" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias">Add Alias</ui-btn>
-              </div>
+
+            </div>
+            <div v-else-if="authorCopy.originalAuthor" class="p-2">
+              <p class="text-white text-opacity-60 uppercase text-xs mb-2">Original Author:</p>
+              <span>{{ authorCopy.originalAuthor.name }}</span>
             </div>
 
-            <div v-else-if="authorCopy.originalAuthor" class="p-2">
-              <span>Original Author: {{ authorCopy.originalAuthor }}</span>
+            <div v-if="!authorCopy.originalAuthor" class="p-2 flex">
+              <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+              <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias">ADD</ui-btn>
             </div>
 
             <div class="p-2">
@@ -70,6 +72,7 @@ export default {
   data() {
     return {
       newAlias: '',
+      filteredAuthors: [], //When add an alias, it matches the database for an existing author with similar name
       authorCopy: {
         name: '',
         asin: '',
@@ -126,7 +129,7 @@ export default {
       this.authorCopy = {
         ...this.author,
         aliases: this.author.aliases || [],
-        originalAuthor: this.originalAuthor || null
+        originalAuthor: this.author.originalAuthor || null
       }
     },
     removeClick() {
@@ -294,9 +297,16 @@ export default {
       } finally {
         this.processing = false;
       }
-    }
+    },
   },
   mounted() {},
   beforeDestroy() {}
 }
 </script>
+
+<style scoped>
+.add-alias-btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+</style>

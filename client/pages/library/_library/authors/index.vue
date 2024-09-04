@@ -93,9 +93,11 @@ export default {
       const bDesc = this.authorSortDesc ? -1 : 1
       return this.authors.sort((a, b) => {
         if (typeof a[sortProp] === 'number' && typeof b[sortProp] === 'number') {
-          return a[sortProp] > b[sortProp] ? bDesc : -bDesc
+          return a[sortProp] > b[sortProp] ? bDesc : -bDesc;
         }
-        return a[sortProp].localeCompare(b[sortProp], undefined, { sensitivity: 'base' }) * bDesc
+        const aVal = a[sortProp] || '';
+        const bVal = b[sortProp] || '';
+        return aVal.localeCompare(bVal, undefined, { sensitivity: 'base' }) * bDesc;
       })
     }
   },
@@ -173,59 +175,13 @@ export default {
 </script>
 
 <style scoped>
-.page {
-  background-color: #1a1a1a;
-  color: #ffffff;
-}
-
-.author-card-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
 .btn-primary {
-  background-color: #28a745;
+  background-color: #809f52;
   color: #ffffff;
 }
 
 .btn-disabled {
-  background-color: #6c757d;
+  background-color: #838383;
   color: #ffffff;
-}
-
-.flex {
-  display: flex;
-}
-
-.justify-end {
-  justify-content: flex-end;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.p-4 {
-  padding: 1rem;
-}
-
-.p-8e {
-  padding: 2rem;
-}
-
-.select-bar {
-
 }
 </style>
