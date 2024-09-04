@@ -97,49 +97,66 @@ export default {
       console.log('Author A:', this.authorA)
       console.log('Author B:', this.authorB)
 
-      const targetAuthor = direction === 'AtoB' ? this.authorB : this.authorA
-      const aliasOfAuthor = direction === 'AtoB' ? this.authorA : this.authorB
+      const targetAuthor = direction === 'AtoB' ? this.authorB : this.authorA //B
+      const aliasOfAuthor = direction === 'AtoB' ? this.authorA : this.authorB //A
 
-      if (aliasOfAuthor.is_alias_of) {
-        const confirmOverride = confirm(`Author ${aliasOfAuthor.name} is already an alias of another author. Do you want to override this alias relationship?`)
-        if (!confirmOverride) {
-          return
-        }
+      const token = this.userToken
+      const headers = {
+        Authorization: `Bearer ${token}`
       }
-
-      if (!targetAuthor || !aliasOfAuthor) {
-        console.error('Failed to set targetAuthor or aliasOfAuthor correctly.')
-        this.$toast.error('Failed to set the target author or alias author.')
-        return
-      }
-      console.log('Target Author:', targetAuthor)
-      console.log('Alias Of Author:', aliasOfAuthor)
 
       try {
-        const token = this.userToken
-        const headers = {
-          Authorization: `Bearer ${token}`
+        //1.B 已经是别人的 alias
+        if (targetAuthor.is_alias_of) {
+          const confirmOverride = confirm(`Author ${targetAuthor.name} is already an alias of another author. Do you want to unlink their relationship and overwrite this alias relationship?`)
+          if (confirmOverride) {
+            await this.removeAlias(targetAuthor, headers)
+          } else {
+            return // dont choice ,return
+          }
         }
-
-        const payload = {
-          name: targetAuthor.name,
-          asin: targetAuthor.asin,
-          description: targetAuthor.description,
-          alias: targetAuthor.alias,
-          is_alias_of: aliasOfAuthor.id
+        // 情况2：A 已经是别人的 alias
+        if (aliasOfAuthor.is_alias_of) {
+          const confirmOverrideAlias = confirm(`Author ${aliasOfAuthor.name} is already an alias of another author. Do you want to unlink their relationship and overwrite this alias relationship?`)
+          if (confirmOverrideAlias) {
+            await this.removeAlias(aliasOfAuthor, headers)
+          } else {
+            return
+          }
         }
-        console.log('Sending alias payload:', payload)
-
-        const response = await this.$axios.patch(`/api/authors/${targetAuthor.id}`, payload, { headers })
-        console.log('Alias creation successful:', response.data)
-
-        this.$toast.success(`Alias created successfully: ${direction}`)
-        this.$emit('make-alias', response.data)
-        this.close()
+        // 最后，将 A 设置为 B 的 alias（或反之，取决于 direction）
+        await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+        this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+        this.$emit('make-alias-merge')
       } catch (error) {
-        this.$toast.error('Failed to make alias')
-        console.error('Make alias error:', error)
+        this.$toast.error('Failed to set alias')
+        console.error('Error setting alias:', error)
       }
+
+      this.close()
+    },
+    async removeAlias(author, headers) {
+      const payloadRemoveAlias = {
+        name: author.name,
+        asin: author.asin,
+        description: author.description,
+        alias: author.alias,
+        is_alias_of: null // 将 alias 关系解除
+      }
+      console.log(`Removing alias relationship for ${author.name}`)
+      await this.$axios.patch(`/api/authors/${author.id}`, payloadRemoveAlias, { headers })
+    },
+
+    async setAlias(targetAuthor, aliasOfAuthor, headers) {
+      const payloadSetAlias = {
+        name: targetAuthor.name,
+        asin: targetAuthor.asin,
+        description: targetAuthor.description,
+        alias: targetAuthor.alias,
+        is_alias_of: aliasOfAuthor.id // 将 alias 设置为新的 id
+      }
+      console.log(`Setting alias for ${targetAuthor.name} as ${aliasOfAuthor.name}'s alias`)
+      await this.$axios.patch(`/api/authors/${targetAuthor.id}`, payloadSetAlias, { headers })
     },
     close() {
       // if (this.selectedAuthorPair && this.selectedAuthorPair.metadata && this.selectedAuthorPair.metadata.notificationId) {
