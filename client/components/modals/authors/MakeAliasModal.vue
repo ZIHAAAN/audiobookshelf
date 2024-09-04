@@ -128,6 +128,7 @@ export default {
           alias: targetAuthor.alias,
           is_alias_of: aliasOfAuthor.id
         }
+
         console.log('Sending alias payload:', payload)
 
         const response = await this.$axios.patch(`/api/authors/${targetAuthor.id}`, payload, { headers })
