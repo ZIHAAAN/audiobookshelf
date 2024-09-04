@@ -106,41 +106,104 @@ export default {
       }
 
       try {
-        //1.B 已经是别人的 alias
-        if (targetAuthor.is_alias_of) {
-          const confirmOverride = confirm(`Author ${targetAuthor.name} is already an alias of another author. Do you want to unlink their relationship and overwrite this alias relationship?`)
-          if (confirmOverride) {
-            await this.removeAlias(targetAuthor, headers)
-          } else {
-            return // dont choice ,return
+        if (targetAuthor.is_alias_of && aliasOfAuthor.is_alias_of) {
+          const originalAuthorA = await this.$axios.$get(`/api/authors/${targetAuthor.is_alias_of}`).catch((error) => {
+            console.error('Failed to get author', error)
+            return null
+          })
+
+          const originalAuthorB = await this.$axios.$get(`/api/authors/${aliasOfAuthor.is_alias_of}`).catch((error) => {
+            console.error('Failed to get author', error)
+            return null
+          })
+
+          // const confirmBothOverride = confirm(`Both ${targetAuthor.name} and ${aliasOfAuthor.name} are already aliases of other authors (${originalAuthorA ? originalAuthorA.name : 'another author'} and ${originalAuthorB ? originalAuthorB.name : 'another author'}). Do you want to unlink their relationships and overwrite this alias relationship?`)
+
+          // if (confirmBothOverride) {
+          //   await this.removeAlias(targetAuthor, headers)
+          //   await this.removeAlias(aliasOfAuthor, headers)
+          // } else {
+          //   return // 用户选择取消，不进行任何操作
+          // }
+          const payload = {
+            message: `Both ${targetAuthor.name} and ${aliasOfAuthor.name} are already aliases of other authors (${originalAuthorA ? originalAuthorA.name : 'another author'} and ${originalAuthorB ? originalAuthorB.name : 'another author'}). Do you want to unlink their relationships and overwrite this alias relationship?`,
+            type: 'yesNo',
+            callback: async (confirmed) => {
+              if (confirmed) {
+                await this.removeAlias(targetAuthor, headers)
+                await this.removeAlias(aliasOfAuthor, headers)
+                await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+                this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+                this.$emit('make-alias-merge')
+              }
+            }
           }
-        }
-        // 情况2：A 已经是别人的 alias
-        if (aliasOfAuthor.is_alias_of) {
-          const confirmOverrideAlias = confirm(`Author ${aliasOfAuthor.name} is already an alias of another author. Do you want to unlink their relationship and overwrite this alias relationship?`)
-          if (confirmOverrideAlias) {
-            await this.removeAlias(aliasOfAuthor, headers)
-          } else {
-            return
+          this.$store.commit('globals/setConfirmPrompt', payload)
+          //1.B 已经是别人的 alias
+        } else if (targetAuthor.is_alias_of) {
+          const originalAuthor = await this.$axios.$get(`/api/authors/${targetAuthor.is_alias_of}?`).catch((error) => {
+            console.error('Failed to get author', error)
+            return null
+          })
+
+          // const confirmOverride = confirm(`Author ${targetAuthor.name} is already an alias of ${originalAuthor ? originalAuthor.name : 'another author'}. Do you want to unlink their relationship and overwrite this alias relationship?`)
+          // if (confirmOverride) {
+          //   await this.removeAlias(targetAuthor, headers)
+          // } else {
+          const payload = {
+            message: `Author ${targetAuthor.name} is already an alias of ${originalAuthor ? originalAuthor.name : 'another author'}. Do you want to unlink their relationship and overwrite this alias relationship?`,
+            type: 'yesNo',
+            callback: async (confirmed) => {
+              if (confirmed) {
+                await this.removeAlias(targetAuthor, headers)
+                await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+                this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+                this.$emit('make-alias-merge')
+              }
+            }
           }
+          this.$store.commit('globals/setConfirmPrompt', payload)
+          // return // dont choice ,return
+          // 情况2：A 已经是别人的 alias
+        } else if (aliasOfAuthor.is_alias_of) {
+          const originalAuthor = await this.$axios.$get(`/api/authors/${aliasOfAuthor.is_alias_of}?`).catch((error) => {
+            console.error('Failed to get author', error)
+            return null
+          })
+
+          // const confirmOverrideAlias = confirm(`Author ${aliasOfAuthor.name} is already an alias of ${originalAuthor ? originalAuthor.name : 'another author'}. Do you want to unlink their relationship and overwrite this alias relationship?`)
+          // if (confirmOverrideAlias) {
+          //   await this.removeAlias(aliasOfAuthor, headers)
+          // } else {
+          const payload = {
+            message: `Author ${aliasOfAuthor.name} is already an alias of ${originalAuthor ? originalAuthor.name : 'another author'}. Do you want to unlink their relationship and overwrite this alias relationship?`,
+            type: 'yesNo',
+            callback: async (confirmed) => {
+              if (confirmed) {
+                await this.removeAlias(aliasOfAuthor, headers)
+                await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+                this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+                this.$emit('make-alias-merge')
+              }
+            }
+          }
+
+          this.$store.commit('globals/setConfirmPrompt', payload)
+          // return
+        } else {
+          await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+          this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+          this.$emit('make-alias-merge')
         }
-<<<<<<< HEAD
-        // 最后，将 A 设置为 B 的 alias（或反之，取决于 direction）
-        await this.setAlias(targetAuthor, aliasOfAuthor, headers)
-        this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
-        this.$emit('make-alias-merge')
-=======
-
-        console.log('Sending alias payload:', payload)
-
-        const response = await this.$axios.patch(`/api/authors/${targetAuthor.id}`, payload, { headers })
-        console.log('Alias creation successful:', response.data)
-
-        this.$toast.success(`Alias created successfully: ${direction}`)
-        this.$emit('make-alias', response.data)
-        this.close()
->>>>>>> kang/master
       } catch (error) {
+        // 最后，将 A 设置为 B 的 alias（或反之，取决于 direction）
+        //   await this.setAlias(targetAuthor, aliasOfAuthor, headers)
+        //   this.$toast.success(`Alias created successfully: ${aliasOfAuthor.name} as ${targetAuthor.name}'s alias`)
+        //   this.$emit('make-alias-merge')
+        // } catch (error) {
+        //   this.$toast.error('Failed to set alias')
+        //   console.error('Error setting alias:', error)
+        // }
         this.$toast.error('Failed to set alias')
         console.error('Error setting alias:', error)
       }
