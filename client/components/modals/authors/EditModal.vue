@@ -38,17 +38,15 @@
                 <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
               </div>
 
-              <div class="p-2 flex">
-                <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias">ADD</ui-btn>
-              </div>
-
-
-
             </div>
             <div v-else-if="authorCopy.originalAuthor" class="p-2">
               <p class="text-white text-opacity-60 uppercase text-xs mb-2">Original Author:</p>
               <span>{{ authorCopy.originalAuthor.name }}</span>
+            </div>
+
+            <div v-if="!authorCopy.originalAuthor" class="p-2 flex">
+              <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+              <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias">ADD</ui-btn>
             </div>
 
             <div class="p-2">
