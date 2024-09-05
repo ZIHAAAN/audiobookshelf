@@ -34,8 +34,9 @@ import MergeAuthorModal from '@/components/modals/authors/MergeModal.vue'
 
 export default {
   components: {
-    MergeAuthorModal, MakeAliasModal,
-    EditModal,
+    MergeAuthorModal,
+    MakeAliasModal,
+    EditModal
   },
   async asyncData({ store, params, redirect }) {
     var libraryId = params.library
@@ -60,7 +61,7 @@ export default {
       // selectedAuthorsMap: {},
       selectedAuthors: [],
       isMergeModalVisible: false,
-      isMakeAliasModalVisible: false,
+      isMakeAliasModalVisible: false
     }
   },
   computed: {
@@ -93,11 +94,11 @@ export default {
       const bDesc = this.authorSortDesc ? -1 : 1
       return this.authors.sort((a, b) => {
         if (typeof a[sortProp] === 'number' && typeof b[sortProp] === 'number') {
-          return a[sortProp] > b[sortProp] ? bDesc : -bDesc;
+          return a[sortProp] > b[sortProp] ? bDesc : -bDesc
         }
-        const aVal = a[sortProp] || '';
-        const bVal = b[sortProp] || '';
-        return aVal.localeCompare(bVal, undefined, { sensitivity: 'base' }) * bDesc;
+        const aVal = a[sortProp] || ''
+        const bVal = b[sortProp] || ''
+        return aVal.localeCompare(bVal, undefined, { sensitivity: 'base' }) * bDesc
       })
     }
   },
@@ -133,20 +134,38 @@ export default {
       this.$store.commit('globals/showEditAuthorModal', author)
       //   })
     },
-    handleSelect({ author, isSelected }) {
-      console.log("author id:" + author.id + " Select state:" + isSelected)
+    async handleSelect({ author, isSelected }) {
+      console.log('author id:' + author.id + ' Select state:' + isSelected)
       if (isSelected) {
-        if (!this.selectedAuthors.some(selectedAuthor => selectedAuthor.id === author.id)) {
+        if (!this.selectedAuthors.some((selectedAuthor) => selectedAuthor.id === author.id)) {
+          // 在此处调用 API 获取 alias 信息
+          const alias = await this.fetchAuthorAlias(author.id)
+          author.alias = alias || [] // 将 alias 信息添加到 author 对象中
+
           this.selectedAuthors.push(author)
         }
       } else {
-        this.selectedAuthors = this.selectedAuthors.filter(selectedAuthor => selectedAuthor.id !== author.id)
+        this.selectedAuthors = this.selectedAuthors.filter((selectedAuthor) => selectedAuthor.id !== author.id)
       }
       console.log(this.selectedAuthors)
     },
+    async fetchAuthorAlias(authorId) {
+      try {
+        const token = this.$store.getters['user/getToken']
+        const response = await this.$axios.get(`/api/authors/${authorId}/alias`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        return response.data
+      } catch (error) {
+        console.error('Failed to fetch author alias:', error)
+        return []
+      }
+    },
     openMergeModal() {
-      console.log("authorA:" + this.selectedAuthors[0].name)
-      console.log("authorB:" + this.selectedAuthors[1].name)
+      console.log('authorA:' + this.selectedAuthors[0].name)
+      console.log('authorB:' + this.selectedAuthors[1].name)
       this.isMergeModalVisible = true
       console.log(this.isMergeModalVisible)
     },
