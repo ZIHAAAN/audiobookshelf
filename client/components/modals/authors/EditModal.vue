@@ -32,12 +32,11 @@
             </div>
 
             <div v-if="authorCopy.aliases.length > 0" class="p-2">
-              <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases: </p>
+              <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases:</p>
               <div v-for="alias in authorCopy.aliases" :key="alias" class="flex justify-between items-center m-2">
                 <span>{{ alias.name }}</span>
                 <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
               </div>
-
             </div>
             <div v-else-if="authorCopy.originalAuthor" class="p-2">
               <p class="text-white text-opacity-60 uppercase text-xs mb-2">Original Author:</p>
@@ -48,7 +47,9 @@
               <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
               <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias">ADD</ui-btn>
             </div>
-
+            <div class="p-2">
+              <ui-multi-select-query-input ref="authorsSelect" v-model="authorCopy.authors" :label="$strings.LabelAuthors" filter-key="authors" />
+            </div>
             <div class="p-2">
               <ui-textarea-with-label v-model="authorCopy.description" :disabled="processing" :label="$strings.LabelDescription" :rows="8" />
             </div>
@@ -73,12 +74,13 @@ export default {
     return {
       newAlias: '',
       filteredAuthors: [], //When add an alias, it matches the database for an existing author with similar name
+      authors: [], // 这里是 v-model 绑定的数组
       authorCopy: {
         name: '',
         asin: '',
         description: '',
         aliases: [],
-        originalAuthor: null,
+        originalAuthor: null
       },
       imageUrl: '',
       processing: false
@@ -110,6 +112,12 @@ export default {
       if (!this.author) return ''
       return this.author.id
     },
+    filterData() {
+      return this.$store.state.libraries.filterData || {}
+    },
+    authors() {
+      return this.filterData.authors || [] // 用于提供作者选择数据（历史记录）
+    },
     title() {
       return this.$strings.HeaderUpdateAuthor
     },
@@ -124,11 +132,17 @@ export default {
     }
   },
   methods: {
+    forceBlur() {
+      if (this.$refs.authorsSelect && this.$refs.authorsSelect.isFocused) {
+        this.$refs.authorsSelect.forceBlur()
+      }
+    },
     init() {
       this.imageUrl = ''
       this.authorCopy = {
         ...this.author,
         aliases: this.author.aliases || [],
+        authors: (this.author.authors || []).map((se) => ({ ...se })), // 初始化时填充作者列表
         originalAuthor: this.author.originalAuthor || null
       }
     },
@@ -158,10 +172,17 @@ export default {
       this.$store.commit('globals/setConfirmPrompt', payload)
     },
     async submitForm() {
-      var keysToCheck = ['name', 'asin', 'description']
+      this.forceBlur()
+      var keysToCheck = ['name', 'asin', 'description', 'authors']
       var updatePayload = {}
       keysToCheck.forEach((key) => {
-        if (this.authorCopy[key] !== this.author[key]) {
+        // 对 authors 进行深度比较
+        if (key === 'authors') {
+          // 这里用 objectArrayEqual 来比较 authors 是否有变动
+          if (!this.objectArrayEqual(this.authorCopy.authors, this.author.authors)) {
+            updatePayload.authors = this.authorCopy.authors.map((v) => ({ ...v }))
+          }
+        } else if (this.authorCopy[key] !== this.author[key]) {
           updatePayload[key] = this.authorCopy[key]
         }
       })
@@ -170,12 +191,15 @@ export default {
         return
       }
       this.processing = true
-      var result = await this.$axios.$patch(`/api/authors/${this.authorId}`, updatePayload).catch((error) => {
-        console.error('Failed', error)
-        const errorMsg = error.response ? error.response.data : null
-        this.$toast.error(errorMsg || this.$strings.ToastAuthorUpdateFailed)
-        return null
-      })
+      var result = await this.$axios
+        .$patch(`/api/authors/${this.authorId}`, updatePayload)
+
+        .catch((error) => {
+          console.error('Failed', error)
+          const errorMsg = error.response ? error.response.data : null
+          this.$toast.error(errorMsg || this.$strings.ToastAuthorUpdateFailed)
+          return null
+        })
       if (result) {
         if (result.updated) {
           this.$toast.success(this.$strings.ToastAuthorUpdateSuccess)
@@ -186,6 +210,22 @@ export default {
         } else this.$toast.info(this.$strings.MessageNoUpdatesWereNecessary)
       }
       this.processing = false
+    },
+    objectArrayEqual(array1, array2) {
+      if (!Array.isArray(array1) || !Array.isArray(array2)) return false
+      if (array1.length !== array2.length) return false
+
+      for (let i = 0; i < array1.length; i++) {
+        const item1 = array1[i]
+        const item2 = array2[i]
+
+        // 比较每个对象的属性
+        if (item1.id !== item2.id || item1.name !== item2.name) {
+          return false
+        }
+      }
+
+      return true
     },
     removeCover() {
       this.processing = true
@@ -268,36 +308,36 @@ export default {
       this.processing = false
     },
     async removeAlias(alias) {
-      this.processing = true;
+      this.processing = true
       try {
         await this.$axios.$delete(`/api/authors/${this.authorId}/alias`, {
           data: { name: alias.name }
-        });
-        this.authorCopy.aliases = this.authorCopy.aliases.filter(a => a.name !== alias.name);
-        this.$toast.success('Alias removed successfully');
+        })
+        this.authorCopy.aliases = this.authorCopy.aliases.filter((a) => a.name !== alias.name)
+        this.$toast.success('Alias removed successfully')
       } catch (error) {
-        console.error('Failed to remove alias', error);
-        this.$toast.error('Failed to remove alias');
+        console.error('Failed to remove alias', error)
+        this.$toast.error('Failed to remove alias')
       } finally {
-        this.processing = false;
+        this.processing = false
       }
     },
     async addAlias() {
-      if (!this.newAlias.trim()) return;
+      if (!this.newAlias.trim()) return
 
-      this.processing = true;
+      this.processing = true
       try {
-        const response = await this.$axios.$post(`/api/authors/${this.authorId}/alias`, { name: this.newAlias });
-        this.authorCopy.aliases.push(response.alias);
-        this.newAlias = '';
-        this.$toast.success('Alias added successfully');
+        const response = await this.$axios.$post(`/api/authors/${this.authorId}/alias`, { name: this.newAlias })
+        this.authorCopy.aliases.push(response.alias)
+        this.newAlias = ''
+        this.$toast.success('Alias added successfully')
       } catch (error) {
-        console.error('Failed to add alias', error);
-        this.$toast.error('Failed to add alias');
+        console.error('Failed to add alias', error)
+        this.$toast.error('Failed to add alias')
       } finally {
-        this.processing = false;
+        this.processing = false
       }
-    },
+    }
   },
   mounted() {},
   beforeDestroy() {}
