@@ -52,6 +52,11 @@ class Database {
     return this.models.author
   }
 
+  /** @type {typeof import('./models/AuthorCombinedAlias')} */
+  get authorCombinedAliasModel() {
+    return this.models.authorCombinedAlias
+  }
+
   /** @type {typeof import('./models/Series')} */
   get seriesModel() {
     return this.models.series
@@ -255,6 +260,7 @@ class Database {
     require('./models/Setting').init(this.sequelize)
     require('./models/CustomMetadataProvider').init(this.sequelize)
     require('./models/MediaItemShare').init(this.sequelize)
+    require('./models/AuthorCombinedAlias').init(this.sequelize)
 
     return this.sequelize.sync({ force, alter: false })
   }
@@ -716,22 +722,6 @@ class Database {
     return (await this.authorModel.getOldByNameAndLibrary(authorName, libraryId))?.is_alias_of || null
   }
 
-  // async getAuthorIdByPenName(libraryId, authorPenName) {
-  //   const authors = await this.authorModel.getOldByPenNameAndLibrary(authorPenName, libraryId)
-  //   //console.debug('Checking author:', authors)
-  //   if (authors.length > 0) {
-  //     return { id: authors[0].id, name: authors[0].name }
-  //   }
-  //   return null
-  // Flatten the list of aliases and check each one
-  // for (const author of this.libraryFilterData[libraryId].authors) {
-  //   console.debug('Checking author:', author)
-  //   if (author.relation?.aliases?.some((alias) => alias.replace(/[\s.]+/g, '').toLowerCase() === authorPenName.replace(/[\s.]+/g, '').toLowerCase())) {
-  //     return { id: author.id, name: author.name }
-  //   }
-  // }
-  // return null
-  //}
 
   /**
    * Get series id for library by name. Uses library filter data if available

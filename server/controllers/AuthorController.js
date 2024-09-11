@@ -505,6 +505,175 @@ class AuthorController {
       res.status(500).send('Internal Server Error')
     }
   }
+
+  /**
+   * POST: api/authors/:id/combined_alias
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async markAsCombinedAlias(req, res) {
+    try {
+      const authorId = req.params.id
+      const author = await Database.authorModel.findByPk(authorId)
+      if (!author) {
+        return res.status(404).send('Author not found')
+      }
+
+      const { originalAuthors } = req.body
+      if (!originalAuthors || !Array.isArray(originalAuthors) || originalAuthors.length === 0) {
+        return res.status(400).json({ error: 'Missing or invalid request body' })
+      }
+      for (let i = 0; i < originalAuthors.length; i++) {
+        let originalAuthorId = originalAuthors[i]
+        let originalAuthor = await Database.authorModel.findByPk(originalAuthorId)
+        if (!originalAuthor) {
+          return res.status(404).send('Original author not found')
+        }
+
+        await Database.authorCombinedAliasModel.create({
+          authorId: originalAuthorId,
+          aliasId: authorId,
+          createdAt: new Date()
+        })
+      }
+
+      author.is_alias_of = 0
+      await author.save()
+      return res.status(200).json({ message: 'Combined alias created successfully' })
+    }
+
+    catch (error) {
+      res.status(500).send('Internal Server Error')
+    }
+  }
+
+  /**
+   * GET: api/authors/:id/origins
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async getOriginalAuthors(req, res) {
+    try {
+      const aliasId = req.params.id
+      const alias = await Database.authorModel.findByPk(aliasId)
+      if (!alias) {
+        return res.status(404).send('Alias not found')
+      }
+      if (alias.is_alias_of !== 0) {
+        return res.status(404).send('Not a combined alias')
+      }
+
+      const data = await Database.authorCombinedAliasModel.findAll({
+        where: { aliasId }
+      })
+
+      if (data.length === 0) {
+        return res.status(404).send('No original authors found for this alias');
+      }
+
+      const authorIds = data.map(data => data.authorId);
+
+      const originalAuthors = await Database.authorModel.findAll({
+        where: {
+          id: authorIds
+        },
+        attributes: ['id', 'name']
+      })
+
+      return res.status(200).json(originalAuthors);
+    }
+
+    catch (error) {
+      Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
+      res.status(500).send('Internal Server Error')
+    }
+  }
+
+  /**
+   * GET: api/authors/:id/combined_alias
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async getCombinedAlias(req, res) {
+    try {
+      const authorId = req.params.id
+      const author  = await Database.authorModel.findByPk(authorId)
+      if (!author) {
+        return res.status(404).send('Author not found')
+      }
+      if (author.is_alias_of !== null) {
+        return res.status(404).send('Not an original author')
+      }
+
+      const data = await Database.authorCombinedAliasModel.findAll({
+        where: { authorId }
+      })
+
+      if (data.length === 0) {
+        return res.status(404).send('No combined alias found for this author');
+      }
+
+      const aliasIds = data.map(data => data.aliasId);
+
+      const combinedAliases = await Database.authorModel.findAll({
+        where: {
+          id: aliasIds
+        },
+        attributes: ['id', 'name']
+      })
+
+      return res.status(200).json(aliasIds);
+    }
+
+    catch (error) {
+      Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
+      res.status(500).send('Internal Server Error')
+    }
+  }
+
+  /**
+   * DELETE: api/authors/combined_alias
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async deleteCombinedAlias(req, res) {
+    const { authorId, aliasId } = req.body
+    try {
+      const deleteResult = await Database.authorCombinedAliasModel.destroy({
+        where: {
+          authorId,
+          aliasId
+        }
+      })
+
+      if (deleteResult === 0) {
+        return res.status(404).send('Combination not found')
+      }
+
+      const remainingAliases = await Database.authorCombinedAliasModel.count({
+        where:{ aliasId }
+      })
+
+      if (remainingAliases.length === 0) {
+        await Database.authorModel.update(
+          { is_alias_of: null },
+          { where: { id: aliasId } }
+        )
+      }
+
+      return res.status(200).send('Alias combination deleted successfully')
+    }
+
+    catch (error) {
+      Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
+      res.status(500).send('Internal Server Error')
+    }
+  }
+
   async middleware(req, res, next) {
     const author = await Database.authorModel.getOldById(req.params.id)
     if (!author) return res.sendStatus(404)
