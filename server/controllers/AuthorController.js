@@ -18,7 +18,6 @@ class AuthorController {
   constructor() {}
   async findOne(req, res) {
     const include = (req.query.include || '').split(',')
-
     const authorJson = req.author.toJSON()
 
     // Used on author landing page to include library items and items grouped in series

@@ -688,7 +688,6 @@ class LibraryController {
       oldAuthor.lastFirst = author.lastFirst
       oldAuthors.push(oldAuthor)
     }
-
     res.json({
       authors: oldAuthors
     })

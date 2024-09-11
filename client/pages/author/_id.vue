@@ -17,19 +17,30 @@
           </div>
 
           <!-- Alias or Original Author Section -->
-          <div v-if="author.is_alias_of" class="mb-4">
+          <div v-if="author.is_alias_of !== null && author.is_alias_of != 0" class="mb-4">
             <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author</p>
             <nuxt-link :to="`/author/${author.is_alias_of}`" class="alias-box inline-block p-2 rounded mb-2 text-white">
               {{ author.originalAuthor.name }}
             </nuxt-link>
           </div>
-          <!-- 添加条件 && 有其他作者 -->
+
           <div v-else-if="!author.is_alias_of && author.aliases.length" class="mb-4">
             <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases</p>
             <div v-for="alias in author.aliases" :key="alias.id">
               <nuxt-link :to="`/author/${alias.id}`">
                 <div class="inline-block alias-box p-2 rounded mb-2 text-white">
                   {{ alias.name }}
+                </div>
+              </nuxt-link>
+            </div>
+          </div>
+          <div v-else-if="author.is_alias_of === 0" class="mb-4">
+            <p class="text-white text-opacity-60 text-xs mb-2">Author {{ author.name }} is a combined auther</p>
+            <p class="text-white text-opacity-60 text-xs mb-2">The following authors use this alias write these books.</p>
+            <div v-for="originalAuthor in author.combinedOriginalAuthor" :key="originalAuthor.id">
+              <nuxt-link :to="`/author/${originalAuthor.id}`">
+                <div class="inline-block alias-box p-2 rounded mb-2 text-white">
+                  {{ originalAuthor.name }}
                 </div>
               </nuxt-link>
             </div>
@@ -70,7 +81,6 @@ export default {
       console.error('Failed to get author', error)
       return null
     })
-
     const originalAuthor = await app.$axios.$get(`/api/authors/${author.is_alias_of}?include=items,series`).catch((error) => {
       console.error('Failed to get original author', error)
       return null
@@ -79,6 +89,16 @@ export default {
       console.error('Failed to get aliases', error)
       return null
     })
+    const combinedOriginalAuthor = await app.$axios.$get(`/api/authors/${params.id}/origins`).catch((error) => {
+      console.error('Failed to get combined original author', error)
+      return null
+    })
+
+    // const combinedAlias = await app.$axios.$get(`/api/authors/${params.id}/combined_alias`).catch((error) => {
+    //   console.error('Failed to get combined alias', error)
+    //   return null
+    // })
+    // console.log('combinedAlias----------------------', combinedAlias)
 
     if (!author) {
       return redirect(`/library/${store.state.libraries.currentLibraryId}/authors`)
@@ -92,7 +112,8 @@ export default {
       author: {
         ...author,
         originalAuthor: originalAuthor || null,
-        aliases: aliases || []
+        aliases: aliases || [],
+        combinedOriginalAuthor
       }
     }
   },
