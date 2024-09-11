@@ -18,13 +18,14 @@
 
           <!-- Alias or Original Author Section -->
           <div v-if="author.is_alias_of" class="mb-4">
-            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author </p>
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author</p>
             <nuxt-link :to="`/author/${author.is_alias_of}`" class="alias-box inline-block p-2 rounded mb-2 text-white">
               {{ author.originalAuthor.name }}
             </nuxt-link>
           </div>
-          <div v-else-if="!author.is_alias_of" class="mb-4">
-            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases </p>
+          <!-- 添加条件 && 有其他作者 -->
+          <div v-else-if="!author.is_alias_of && author.aliases.length" class="mb-4">
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases</p>
             <div v-for="alias in author.aliases" :key="alias.id">
               <nuxt-link :to="`/author/${alias.id}`">
                 <div class="inline-block alias-box p-2 rounded mb-2 text-white">
@@ -71,13 +72,12 @@ export default {
     })
 
     const originalAuthor = await app.$axios.$get(`/api/authors/${author.is_alias_of}?include=items,series`).catch((error) => {
-      console.error('Failed to get author', error)
+      console.error('Failed to get original author', error)
       return null
     })
-
     const aliases = await app.$axios.$get(`/api/authors/${params.id}/alias`).catch((error) => {
       console.error('Failed to get aliases', error)
-      return
+      return null
     })
 
     if (!author) {
@@ -91,9 +91,9 @@ export default {
     return {
       author: {
         ...author,
-        originalAuthor: originalAuthor ||null,
+        originalAuthor: originalAuthor || null,
         aliases: aliases || []
-      },
+      }
     }
   },
   data() {
