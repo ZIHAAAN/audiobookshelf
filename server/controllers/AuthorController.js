@@ -214,9 +214,10 @@ class AuthorController {
    */
   async delete(req, res) {
     Logger.info(`[AuthorController] Removing author "${req.author.name}"`)
-
+    if (!req.author.is_alias_of) {
+      await Database.authorModel.removeAllAlias(req.author.id)
+    }
     await Database.authorModel.removeById(req.author.id)
-
     if (req.author.imagePath) {
       await CacheManager.purgeImageCache(req.author.id) // Purge cache
     }
@@ -541,9 +542,7 @@ class AuthorController {
       author.is_alias_of = 0
       await author.save()
       return res.status(200).json({ message: 'Combined alias created successfully' })
-    }
-
-    catch (error) {
+    } catch (error) {
       res.status(500).send('Internal Server Error')
     }
   }
@@ -570,10 +569,10 @@ class AuthorController {
       })
 
       if (data.length === 0) {
-        return res.status(404).send('No original authors found for this alias');
+        return res.status(404).send('No original authors found for this alias')
       }
 
-      const authorIds = data.map(data => data.authorId);
+      const authorIds = data.map((data) => data.authorId)
 
       const originalAuthors = await Database.authorModel.findAll({
         where: {
@@ -582,10 +581,8 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-      return res.status(200).json(originalAuthors);
-    }
-
-    catch (error) {
+      return res.status(200).json(originalAuthors)
+    } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
@@ -600,7 +597,7 @@ class AuthorController {
   async getCombinedAlias(req, res) {
     try {
       const authorId = req.params.id
-      const author  = await Database.authorModel.findByPk(authorId)
+      const author = await Database.authorModel.findByPk(authorId)
       if (!author) {
         return res.status(404).send('Author not found')
       }
@@ -613,10 +610,10 @@ class AuthorController {
       })
 
       if (data.length === 0) {
-        return res.status(404).send('No combined alias found for this author');
+        return res.status(404).send('No combined alias found for this author')
       }
 
-      const aliasIds = data.map(data => data.aliasId);
+      const aliasIds = data.map((data) => data.aliasId)
 
       const combinedAliases = await Database.authorModel.findAll({
         where: {
@@ -625,10 +622,8 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-      return res.status(200).json(aliasIds);
-    }
-
-    catch (error) {
+      return res.status(200).json(aliasIds)
+    } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
@@ -655,20 +650,15 @@ class AuthorController {
       }
 
       const remainingAliases = await Database.authorCombinedAliasModel.count({
-        where:{ aliasId }
+        where: { aliasId }
       })
 
       if (remainingAliases.length === 0) {
-        await Database.authorModel.update(
-          { is_alias_of: null },
-          { where: { id: aliasId } }
-        )
+        await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
       }
 
       return res.status(200).send('Alias combination deleted successfully')
-    }
-
-    catch (error) {
+    } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
