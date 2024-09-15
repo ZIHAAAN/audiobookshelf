@@ -218,6 +218,10 @@ class ApiRouter {
     this.router.post('/authors/:id/alias', AuthorController.middleware.bind(this), AuthorController.addAlias.bind(this))
     this.router.delete('/authors/:id/alias', AuthorController.middleware.bind(this), AuthorController.deleteAlias.bind(this))
     this.router.get('/authors/:id/origin', AuthorController.middleware.bind(this), AuthorController.getOriginAuthor.bind(this))
+    this.router.get('/authors/:id/origins', AuthorController.middleware.bind(this), AuthorController.getOriginalAuthors.bind(this))
+    this.router.get('/authors/:id/combined_alias', AuthorController.middleware.bind(this), AuthorController.getCombinedAlias.bind(this))
+    this.router.post('/authors/:id/combined_alias', AuthorController.middleware.bind(this), AuthorController.markAsCombinedAlias.bind(this))
+    this.router.delete('/authors/combined_alias', AuthorController.middleware.bind(this), AuthorController.deleteCombinedAlias.bind(this))
 
     //
     // Series Routes

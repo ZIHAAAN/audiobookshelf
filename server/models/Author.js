@@ -83,6 +83,18 @@ class Author extends Model {
     })
   }
 
+  // Unbind all alias of the original author
+  static removeAllAlias(authorId) {
+    return this.update(
+      { is_alias_of: null },
+      {
+        where: {
+          is_alias_of: authorId
+        }
+      }
+    )
+  }
+
   /**
    * Get oldAuthor by id
    * @param {string} authorId
