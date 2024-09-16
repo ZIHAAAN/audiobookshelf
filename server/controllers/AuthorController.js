@@ -561,6 +561,7 @@ class AuthorController {
       }
       if (alias.is_alias_of !== 0) {
         return res.status(404).send('Not a combined alias')
+        //  return res.status(200).json({ message: 'Not a combined alias', originalAuthors: [] })
       }
 
       const data = await Database.authorCombinedAliasModel.findAll({
