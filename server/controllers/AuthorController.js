@@ -625,7 +625,7 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-      return res.status(200).json(aliasIds);
+      return res.status(200).json(combinedAliases);
     }
 
     catch (error) {
