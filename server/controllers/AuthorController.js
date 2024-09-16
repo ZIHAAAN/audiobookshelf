@@ -622,8 +622,15 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
+<<<<<<< HEAD
       return res.status(200).json(aliasIds)
     } catch (error) {
+=======
+      return res.status(200).json(combinedAliases);
+    }
+
+    catch (error) {
+>>>>>>> kang/master
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
