@@ -622,15 +622,8 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-<<<<<<< HEAD
-      return res.status(200).json(aliasIds)
+      return res.status(200).json(combinedAliases)
     } catch (error) {
-=======
-      return res.status(200).json(combinedAliases);
-    }
-
-    catch (error) {
->>>>>>> kang/master
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
@@ -661,22 +654,11 @@ class AuthorController {
       }
 
       const remainingAliases = await Database.authorCombinedAliasModel.count({
-<<<<<<< HEAD
-        where: { aliasId }
-      })
-
-      if (remainingAliases.length === 0) {
-        await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
-=======
-        where:{ aliasId: aliasId }
+        where: { aliasId: aliasId }
       })
 
       if (remainingAliases === 0) {
-        await Database.authorModel.update(
-          { is_alias_of: null },
-          { where: {id: aliasId } }
-        )
->>>>>>> kang/master
+        await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
       }
 
       return res.status(200).send('Alias combination deleted successfully')

@@ -48,7 +48,7 @@
               <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias || currentAuthorStatus === 'Alias'">ADD</ui-btn>
             </div>
             <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn>
-            <ui-btn color="primary" type="button" @click="openNewCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn>
+            <!-- <ui-btn color="primary" type="button" @click="openNewCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn> -->
             <!-- <div class="p-2">
               <ui-multi-select-query-input ref="authorsSelect" v-model="authorCopy.authors" :label="$strings.LabelAuthors" filter-key="authors" />
             </div> -->
@@ -467,8 +467,14 @@ export default {
     async removeCombinedAlias(combinedAlias) {
       this.processing = true
       try {
-        await this.$axios.$delete(`/api/authors/combined_alias`, { data: { name: combinedAlias.name } })
-        this.authorCopy.combinedAliases = this.authorCopy.combinedAliases.filter((a) => a.name !== combinedAlias.name)
+        await this.$axios.$delete(`/api/authors/${this.author.id}/combined_alias`, {
+          data: {
+            authorId: this.author.id,
+            aliasId: combinedAlias.id
+          }
+        })
+        // 从 combinedAliases 数组中过滤掉已删除的 alias
+        this.authorCopy.combinedAliases = this.authorCopy.combinedAliases.filter((a) => a.id !== combinedAlias.id)
         this.$toast.success('Combined Alias removed successfully')
       } catch (error) {
         this.$toast.error('Failed to remove combined alias')
