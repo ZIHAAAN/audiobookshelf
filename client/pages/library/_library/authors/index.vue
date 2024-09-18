@@ -130,6 +130,7 @@ export default {
       this.authors = this.authors.filter((au) => au.id !== author.id)
     },
     editAuthor(author) {
+      console.log('Selected Author:', author)
       // this.confirmMerge(() => {
       this.$store.commit('globals/showEditAuthorModal', author)
       //   })
