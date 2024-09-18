@@ -93,7 +93,7 @@ export default {
           }
           console.log('authorA:', authorA)
           console.log('authorB:', authorB)
-          if (!authorA.is_alias_of) {
+          if (authorA.is_alias_of) {
             authorA.alias = await $axios.$get(`/api/authors/${authorA.id}/alias`, {
               headers: {
                 Authorization: `Bearer ${token}`
@@ -101,7 +101,7 @@ export default {
             })
           }
 
-          if (!authorB.is_alias_of) {
+          if (authorB.is_alias_of) {
             authorB.alias = await $axios.$get(`/api/authors/${authorB.id}/alias`, {
               headers: {
                 Authorization: `Bearer ${token}`

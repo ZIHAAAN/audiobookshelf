@@ -147,7 +147,6 @@ export default {
         })
     },
 
-    /// kang/master
     Merge(penNameConfirmation) {
       for (const item of penNameConfirmation) {
         console.log('Book', item)
@@ -165,7 +164,6 @@ export default {
       }
     },
 
-    //// kang/master
     deleteClick() {
       const payload = {
         message: this.$getString('MessageConfirmDeleteLibrary', [this.library.name]),

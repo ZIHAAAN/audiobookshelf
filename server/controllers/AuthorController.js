@@ -561,6 +561,7 @@ class AuthorController {
       }
       if (alias.is_alias_of !== 0) {
         return res.status(404).send('Not a combined alias')
+        //  return res.status(200).json({ message: 'Not a combined alias', originalAuthors: [] })
       }
 
       const data = await Database.authorCombinedAliasModel.findAll({
@@ -621,7 +622,7 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-      return res.status(200).json(aliasIds)
+      return res.status(200).json(combinedAliases)
     } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
@@ -629,18 +630,22 @@ class AuthorController {
   }
 
   /**
-   * DELETE: api/authors/combined_alias
+   * DELETE: api/authors/:id/combined_alias
    *
    * @param {import('express').Request} req
    * @param {import('express').Response} res
    */
   async deleteCombinedAlias(req, res) {
+    if (!req.body) {
+      return res.status(400).send('Missing request body')
+    }
+
     const { authorId, aliasId } = req.body
     try {
       const deleteResult = await Database.authorCombinedAliasModel.destroy({
         where: {
-          authorId,
-          aliasId
+          authorId: authorId,
+          aliasId: aliasId
         }
       })
 
@@ -649,10 +654,10 @@ class AuthorController {
       }
 
       const remainingAliases = await Database.authorCombinedAliasModel.count({
-        where: { aliasId }
+        where: { aliasId: aliasId }
       })
 
-      if (remainingAliases.length === 0) {
+      if (remainingAliases === 0) {
         await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
       }
 
