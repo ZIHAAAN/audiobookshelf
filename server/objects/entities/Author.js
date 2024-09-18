@@ -28,7 +28,7 @@ class Author {
     this.addedAt = author.addedAt
     this.updatedAt = author.updatedAt
     this.libraryId = author.libraryId
-    this.is_alias_of = author.is_alias_of || null
+    this.is_alias_of = author.is_alias_of //do not set it null, it could be 0 !!!
   }
 
   get lastFirst() {
