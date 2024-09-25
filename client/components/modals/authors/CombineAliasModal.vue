@@ -86,53 +86,110 @@ export default {
         this.$refs.authorsSelect.forceBlur()
       }
     },
-    confirm() {
-      this.$emit('save-authors', this.authorCopy)
-      this.$emit('save-authors', this.author)
+    // async search() {
+    //   if (!this.textInput) return
+    //   this.currentSearch = this.textInput
+    //   const dataToSearch = this.authors || []
 
-      this.$emit('input', false)
+    //   // 过滤历史记录，匹配用户输入
+    //   const results = dataToSearch.filter((author) => author.name.toLowerCase().includes(this.currentSearch.toLowerCase().trim()))
+
+    //   this.items = results
+    // },
+    // 新建作者逻辑，使用你已有的 createAuthorsAndSeriesForItemUpdate 逻辑
+    //     async createNewAuthorIfNeeded(authorName) {
+    //     let newAuthor = null;
+    //     try {
+    //         // 调用你已经定义的处理创建作者的 API 逻辑
+    //         const payload = { metadata: { authors: [{ name: authorName }] } };
+    //         const response = await this.$axios.post('/api/authors', payload); // 假设有单独的作者创建 API 路径
+    //         newAuthor = response.data.author; // 直接获取返回的创建好的作者
+    //     } catch (error) {
+    //         console.error('Error creating author:', error);
+    //         this.$toast.error('Failed to create author');
+    //     }
+    //     return newAuthor;
+    // }
+    // ,
+    addSelectedAuthor(author) {
+      this.authorCopy.authors.push(author)
+      this.textInput = null
     },
 
     cancel() {
       this.$emit('input', false)
     },
     async confirm() {
-      let authorIds = []
-
-      // 处理已存在的原作者
-      if (this.author.originalAuthor) {
-        authorIds.push(this.author.originalAuthor.id)
-      }
-
-      // 处理合并的多个原作者
-      if (this.author.combinedAliases.length > 0) {
-        const combinedAuthorIds = this.author.combinedAliases.map((a) => a.id)
-        authorIds.push(...combinedAuthorIds)
-      }
-
-      // 获取通过搜索框选择的作者
-      for (const author of this.authorCopy.authors) {
-        // author 应该已经有 id，无论是新创建的还是已有的
-        if (author.id) {
-          authorIds.push(author.id)
-        }
-      }
-
-      // 发送合并请求
       try {
-        const response = await this.$axios.post(`/api/authors/${this.author.id}/combined_alias`, {
+        const selectedAuthors = this.authorCopy.authors
+        console.log('Selected authors before creation:', selectedAuthors)
+
+        // 获取 libraryId 并确认它存在
+        const libraryId = this.author.libraryId
+        if (!libraryId) {
+          console.error('Library ID not found')
+          return
+        }
+        console.log('Library ID:', libraryId) // 打印 libraryId
+
+        // 检查是否有新作者
+        const newAuthors = selectedAuthors.filter((author) => !author.id || author.id.startsWith('new'))
+        console.log('New authors to be created:', newAuthors)
+
+        let authorIds = selectedAuthors.map((author) => author.id)
+
+        if (newAuthors.length) {
+          const mediaPayload = {
+            metadata: {
+              authors: selectedAuthors.map((author) => ({
+                name: author.name, // 确保作者名称被传递
+                id: author.id || null // 如果有 ID，则传递，否则为空
+              }))
+            }
+          }
+          console.log('Media Payload:', mediaPayload)
+
+          const createdAuthors = await this.createAuthorsAndSeriesForItemUpdate(mediaPayload, libraryId)
+          console.log('Created authors returned:', createdAuthors)
+          if (createdAuthors && createdAuthors.length > 0) {
+            // 将返回的新作者 ID 添加到原有的 authorIds 中
+            const newAuthorIds = createdAuthors.map((author) => author.id)
+
+            // 更新 authorIds，替换掉临时的 new IDs
+            authorIds = authorIds.map((id) => (id.startsWith('new') ? newAuthorIds.shift() : id))
+
+            // 确保新作者的 ID 被更新到 selectedAuthors 中
+            newAuthors.forEach((author, index) => {
+              author.id = newAuthorIds[index]
+            })
+
+            console.log('New authors created successfully.')
+          } else {
+            throw new Error('Failed to create new authors')
+          }
+        }
+
+        // 合并作者
+        console.log('Final Author IDs to be combined:', authorIds)
+
+        await this.$axios.post(`/api/authors/${this.author.id}/combined_alias`, {
           originalAuthors: authorIds
         })
+
         this.$toast.success('Authors combined successfully')
       } catch (error) {
+        console.error('Error combining authors:', error)
         this.$toast.error('Failed to combine authors')
-        console.error(error)
       }
+      // 关闭模态框
       this.$emit('input', false)
     }
   },
   mounted() {
     console.log('Author data received11111:', this.author)
+    if (!this.author.libraryId) {
+      console.error('Library ID is missing from the author object')
+    }
   }
 }
 </script>
