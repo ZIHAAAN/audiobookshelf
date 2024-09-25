@@ -284,6 +284,8 @@ export default {
       this.$emit('submit')
     }
   },
-  mounted() {}
+  mounted() {
+    console.log('当前组件已加载', this.$parent)
+  }
 }
 </script>

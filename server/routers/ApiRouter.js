@@ -589,8 +589,11 @@ class ApiRouter {
         }
         // Remove authors without an id
         mediaMetadata.authors = mediaMetadata.authors.filter((au) => !!au.id)
+
+        console.log('New authors to be created:', newAuthors)
         if (newAuthors.length) {
           await Database.createBulkAuthors(newAuthors)
+          console.log('Authors created successfully.')
           SocketAuthority.emitter(
             'authors_added',
             newAuthors.map((au) => au.toJSON())

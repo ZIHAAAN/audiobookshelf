@@ -5,7 +5,7 @@
         <p class="text-3xl text-white truncate">{{ title }}</p>
       </div>
     </template>
-    <div v-if="author" class="p-4 w-full text-sm py-6 rounded-lg bg-bg shadow-lg border border-black-300 relative overflow-hidden" style="min-height: 400px; max-height: 80vh">
+    <div v-if="author" class="p-4 w-full text-sm py-6 rounded-lg bg-bg shadow-lg border border-black-300 relative" style="min-height: 400px; max-height: 80vh; overflow-y: auto">
       <div class="flex">
         <div class="w-40 p-2">
           <div class="w-full h-45 relative">
@@ -38,48 +38,102 @@
                 <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
               </div> -->
             </div>
-            <div v-else-if="authorCopy.originalAuthor" class="p-2">
+            <!-- <div v-else-if="authorCopy.originalAuthor" class="p-2">
               <p class="text-white text-opacity-60 uppercase text-xs mb-2">Original Author:</p>
               <span>{{ authorCopy.originalAuthor.name }}</span>
-            </div>
+            </div> -->
 
-            <div v-if="!authorCopy.originalAuthor" class="p-2 flex">
+            <!-- <div v-if="!authorCopy.originalAuthor" class="p-2 flex">
               <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
               <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias || currentAuthorStatus === 'Alias'">ADD</ui-btn>
             </div>
-            <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn>
+            <ui-btn v-if="currentAuthorStatus !== 'Original Author'" color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn> -->
             <!-- <ui-btn color="primary" type="button" @click="openNewCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn> -->
             <!-- <div class="p-2">
               <ui-multi-select-query-input ref="authorsSelect" v-model="authorCopy.authors" :label="$strings.LabelAuthors" filter-key="authors" />
             </div> -->
             <!-- Alias Status Dropdown Section -->
             <div class="p-2">
-              <h3>Author Status</h3>
-              <ui-btn color="primary" type="button" @click="toggleAliasDropdown">{{ authorStatusText }}</ui-btn>
-              <div v-if="showAliasDropdown">
-                <p>Current Author Status: {{ currentAuthorStatus }}</p>
+              <h3 @click="toggleAliasDropdown" class="dropdown-icon">Author Status ▼</h3>
+              <!-- <span @click="toggleAliasDropdown" class="dropdown-icon">▼</span> -->
+              <!-- <div class="flex items-center"> -->
+              <!-- <ui-btn color="primary" type="button" @click="toggleAliasDropdown">{{ authorStatusText }}</ui-btn> -->
+              <!-- <span class="author-status-text">{{ authorStatusText }}</span> -->
 
-                <!-- Display Aliases -->
-                <div v-if="authorCopy.aliases.length > 0">
-                  <h4>Aliases:</h4>
-                  <ul>
-                    <li v-for="alias in authorCopy.aliases" :key="alias.id">
-                      {{ alias.name }}
-                      <ui-btn color="error" small type="button" @click="removeAlias(alias)">Delete Alias</ui-btn>
-                    </li>
-                  </ul>
+              <!-- <span @click="toggleAliasDropdown" class="dropdown-icon">▼</span> -->
+              <!-- </div> -->
+              <div v-if="showAliasDropdown">
+                <!-- <p v-if="authorCopy.originalAuthor" class="text-gray-500">Original Author: {{ authorCopy.originalAuthor.name }}</p> -->
+                <!-- <p>Current Author Status: {{ currentAuthorStatus }}</p> -->
+                <p v-if="authorCopy.aliases.length > 0">{{ authorCopy.name }} has below aliases:</p>
+                <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of: {{ authorCopy.originalAuthor.name }}</p>
+                <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is a combined alias of: {{ authorCopy.originalAuthor.name }}</p>
+
+                <p v-else>{{ authorCopy.name }} does not have any alias.</p>
+                <div v-if="authorCopy.aliases.length > 0" color="primary" class="alias-container">
+                  <!-- alias 列表 -->
+                  <div v-for="alias in authorCopy.aliases" :key="alias.id" class="alias-item">
+                    <div class="alias-left">
+                      <span class="alias-bullet">•</span>
+                      <span class="alias-name">{{ alias.name }}</span>
+                    </div>
+                    <div class="alias-right">
+                      <span @click="removeAlias(alias)" class="delete-alias-btn">
+                        <span class="circle">
+                          <span class="cross">x</span>
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Display Combined Aliases -->
                 <div v-if="authorCopy.combinedAliases.length > 0">
                   <h4>Combined Aliases:</h4>
-                  <ul>
-                    <li v-for="combinedAlias in authorCopy.combinedAliases" :key="combinedAlias.id">
-                      {{ combinedAlias.name }}
-                      <ui-btn color="error" small type="button" @click="removeCombinedAlias(combinedAlias)">Delete Combined Alias</ui-btn>
-                    </li>
-                  </ul>
+
+                  <div v-for="combinedAlias in authorCopy.combinedAliases" :key="combinedAlias.id" class="alias-item">
+                    <div class="alias-left">
+                      <span class="alias-bullet">•</span>
+                      <span class="alias-name">{{ combinedAlias.name }}</span>
+                      <!-- <ui-btn color="error" small type="button" @click="removeCombinedAlias(combinedAlias)">Delete Combined Alias</ui-btn> -->
+                    </div>
+                    <div class="alias-right">
+                      <span @click="removeCombinedAlias(combinedAlias)" class="delete-alias-btn">
+                        <span class="circle">
+                          <span class="cross">x</span>
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- 如果 currentAuthorStatus 是 Alias 或 Combined Alias，显示 "Add Original Author" -->
+            <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="p-2 flex">
+              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
+            </div>
+
+            <!-- 如果 currentAuthorStatus 是 Original Author，显示 "Add Alias" -->
+            <div v-if="currentAuthorStatus === 'Original Author'" class="p-2 flex">
+              <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+              <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+            </div>
+
+            <!-- 如果 currentAuthorStatus 是 Unknown，显示 "Add Original Author" 和 "Add Alias" -->
+            <!-- <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex">
+              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
+              <div class="ml-4">
+                <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+                <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+              </div>
+            </div> -->
+            <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex items-center">
+              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn mr-4"> Add Original Author </ui-btn>
+
+              <div class="flex items-center">
+                <ui-text-input class="h-9 w-40 mr-2" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+                <ui-btn class="add-alias-btn w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
               </div>
             </div>
 
@@ -548,15 +602,68 @@ export default {
   padding-left: 0;
   padding-right: 0;
 }
-.mark {
-  margin-left: 120px;
-}
+
 .combined-alias-btn {
   white-space: nowrap;
   background-color: rgb(99, 161, 99);
   padding: 0.5rem 1rem;
   width: fit-content;
   font-size: 1rem;
+}
+.author-status-text {
+  font-weight: bold;
+}
+
+.dropdown-icon {
+  margin-left: 10px;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+}
+h3 {
+  display: inline-block;
+  margin-left: -10px;
+  vertical-align: middle;
+}
+.alias-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.alias-item {
+  margin-bottom: 8px 0; /* 每行之间增加一些间距 */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alias-left {
+  display: flex;
+  align-items: center;
+}
+
+.alias-right {
+  margin-left: 75px;
+}
+
+.delete-alias-btn {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.circle {
+  border: 1px solid red;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cross {
+  color: red;
+  font-size: 14px;
 }
 </style>
 
