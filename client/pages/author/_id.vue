@@ -45,7 +45,7 @@
               </nuxt-link>
             </div>
           </div>
-          <div if="author.combinedAlias.length !== 0" class="mb-4">
+          <div v-if="author.combinedAlias.length !== 0" class="mb-4">
             <p class="text-white text-opacity-60 text-xs mb-2">Author {{ author.name }} has following combined alias</p>
             <div v-for="combinedAlias in author.combinedAlias" :key="combinedAlias.id">
               <nuxt-link :to="`/author/${combinedAlias.id}`">
