@@ -38,38 +38,17 @@
                 <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
               </div> -->
             </div>
-            <!-- <div v-else-if="authorCopy.originalAuthor" class="p-2">
-              <p class="text-white text-opacity-60 uppercase text-xs mb-2">Original Author:</p>
-              <span>{{ authorCopy.originalAuthor.name }}</span>
-            </div> -->
 
-            <!-- <div v-if="!authorCopy.originalAuthor" class="p-2 flex">
-              <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-              <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias || currentAuthorStatus === 'Alias'">ADD</ui-btn>
-            </div>
-            <ui-btn v-if="currentAuthorStatus !== 'Original Author'" color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn> -->
-            <!-- <ui-btn color="primary" type="button" @click="openNewCombineModal" class="combined-alias-btn"> Mark as Combined Alias </ui-btn> -->
-            <!-- <div class="p-2">
-              <ui-multi-select-query-input ref="authorsSelect" v-model="authorCopy.authors" :label="$strings.LabelAuthors" filter-key="authors" />
-            </div> -->
-            <!-- Alias Status Dropdown Section -->
             <div class="p-2">
               <h3 @click="toggleAliasDropdown" class="dropdown-icon">Author Status ▼</h3>
-              <!-- <span @click="toggleAliasDropdown" class="dropdown-icon">▼</span> -->
-              <!-- <div class="flex items-center"> -->
-              <!-- <ui-btn color="primary" type="button" @click="toggleAliasDropdown">{{ authorStatusText }}</ui-btn> -->
-              <!-- <span class="author-status-text">{{ authorStatusText }}</span> -->
 
-              <!-- <span @click="toggleAliasDropdown" class="dropdown-icon">▼</span> -->
-              <!-- </div> -->
               <div v-if="showAliasDropdown">
-                <!-- <p v-if="authorCopy.originalAuthor" class="text-gray-500">Original Author: {{ authorCopy.originalAuthor.name }}</p> -->
-                <!-- <p>Current Author Status: {{ currentAuthorStatus }}</p> -->
                 <p v-if="authorCopy.aliases.length > 0">{{ authorCopy.name }} has below aliases:</p>
                 <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of: {{ authorCopy.originalAuthor.name }}</p>
                 <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is a combined alias of: {{ authorCopy.originalAuthor.name }}</p>
 
                 <p v-else>{{ authorCopy.name }} does not have any alias.</p>
+
                 <div v-if="authorCopy.aliases.length > 0" color="primary" class="alias-container">
                   <!-- alias 列表 -->
                   <div v-for="alias in authorCopy.aliases" :key="alias.id" class="alias-item">
@@ -106,34 +85,25 @@
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+                <!-- 如果 currentAuthorStatus 是 Alias 或 Combined Alias，显示 "Add Original Author" -->
+                <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="p-2 flex">
+                  <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
+                </div>
 
-            <!-- 如果 currentAuthorStatus 是 Alias 或 Combined Alias，显示 "Add Original Author" -->
-            <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="p-2 flex">
-              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
-            </div>
+                <!-- 如果 currentAuthorStatus 是 Original Author，显示 "Add Alias" -->
+                <div v-if="currentAuthorStatus === 'Original Author'" class="p-2 flex">
+                  <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+                  <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+                </div>
 
-            <!-- 如果 currentAuthorStatus 是 Original Author，显示 "Add Alias" -->
-            <div v-if="currentAuthorStatus === 'Original Author'" class="p-2 flex">
-              <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-              <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
-            </div>
+                <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex items-center">
+                  <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn mr-4"> Add Original Author </ui-btn>
 
-            <!-- 如果 currentAuthorStatus 是 Unknown，显示 "Add Original Author" 和 "Add Alias" -->
-            <!-- <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex">
-              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
-              <div class="ml-4">
-                <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
-              </div>
-            </div> -->
-            <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex items-center">
-              <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn mr-4"> Add Original Author </ui-btn>
-
-              <div class="flex items-center">
-                <ui-text-input class="h-9 w-40 mr-2" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                <ui-btn class="add-alias-btn w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+                  <div class="flex items-center">
+                    <ui-text-input class="h-9 w-40 mr-2" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
+                    <ui-btn class="add-alias-btn w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+                  </div>
+                </div>
               </div>
             </div>
 
