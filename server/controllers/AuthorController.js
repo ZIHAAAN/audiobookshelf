@@ -561,7 +561,6 @@ class AuthorController {
       }
       if (alias.is_alias_of !== 0) {
         return res.status(404).send('Not a combined alias')
-        //  return res.status(200).json({ message: 'Not a combined alias', originalAuthors: [] })
       }
 
       const data = await Database.authorCombinedAliasModel.findAll({
@@ -622,7 +621,7 @@ class AuthorController {
         attributes: ['id', 'name']
       })
 
-      return res.status(200).json(combinedAliases)
+      return res.status(200).json(aliasIds)
     } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
@@ -630,7 +629,7 @@ class AuthorController {
   }
 
   /**
-   * DELETE: api/authors/:id/combined_alias
+   * DELETE: api/authors/combined_alias
    *
    * @param {import('express').Request} req
    * @param {import('express').Response} res
@@ -654,15 +653,45 @@ class AuthorController {
       }
 
       const remainingAliases = await Database.authorCombinedAliasModel.count({
-        where: { aliasId: aliasId }
+        where:{ aliasId: aliasId }
       })
 
       if (remainingAliases === 0) {
-        await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
+        await Database.authorModel.update(
+          { is_alias_of: null },
+          { where: {id: aliasId } }
+        )
       }
 
       return res.status(200).send('Alias combination deleted successfully')
-    } catch (error) {
+    }
+
+    catch (error) {
+      Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
+      res.status(500).send('Internal Server Error')
+    }
+  }
+
+  /**
+   * POST: api/authors/:id/createNew
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async createNew(req, res){
+    try {
+      const authorId = req.params.id
+      const author = await Database.authorModel.findByPk(authorId)
+      if (!author) {
+        return res.status(404).send('Author not found')
+      }
+
+      const mediaPayload = req.body
+
+      await this.createAuthorsAndSeriesForItemUpdate(mediaPayload, author.libraryId)
+      return res.status(200).send('successfully create')
+    }
+    catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }

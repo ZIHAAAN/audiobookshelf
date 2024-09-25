@@ -223,6 +223,8 @@ class ApiRouter {
     this.router.post('/authors/:id/combined_alias', AuthorController.middleware.bind(this), AuthorController.markAsCombinedAlias.bind(this))
     this.router.delete('/authors/:id/combined_alias', AuthorController.middleware.bind(this), AuthorController.deleteCombinedAlias.bind(this))
 
+    this.router.post('/authors/:id/createNew', AuthorController.middleware.bind(this), AuthorController.createNew.bind(this))
+
     //
     // Series Routes
     //

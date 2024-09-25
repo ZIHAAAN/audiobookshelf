@@ -149,24 +149,25 @@ export default {
           }
           console.log('Media Payload:', mediaPayload)
 
-          const createdAuthors = await this.createAuthorsAndSeriesForItemUpdate(mediaPayload, libraryId)
-          console.log('Created authors returned:', createdAuthors)
-          if (createdAuthors && createdAuthors.length > 0) {
-            // 将返回的新作者 ID 添加到原有的 authorIds 中
-            const newAuthorIds = createdAuthors.map((author) => author.id)
+          const createdAuthor = await this.$axios.$post(`/api/authors/${this.author.id}/createNew`, mediaPayload)
+          console.log('Created authors returned:',createdAuthor)
 
-            // 更新 authorIds，替换掉临时的 new IDs
-            authorIds = authorIds.map((id) => (id.startsWith('new') ? newAuthorIds.shift() : id))
-
-            // 确保新作者的 ID 被更新到 selectedAuthors 中
-            newAuthors.forEach((author, index) => {
-              author.id = newAuthorIds[index]
-            })
-
-            console.log('New authors created successfully.')
-          } else {
-            throw new Error('Failed to create new authors')
-          }
+          // if (createdAuthors && createdAuthors.length > 0) {
+          //   // 将返回的新作者 ID 添加到原有的 authorIds 中
+          //   const newAuthorIds = createdAuthors.map((author) => author.id)
+          //
+          //   // 更新 authorIds，替换掉临时的 new IDs
+          //   authorIds = authorIds.map((id) => (id.startsWith('new') ? newAuthorIds.shift() : id))
+          //
+          //   // 确保新作者的 ID 被更新到 selectedAuthors 中
+          //   newAuthors.forEach((author, index) => {
+          //     author.id = newAuthorIds[index]
+          //   })
+          //
+          //   console.log('New authors created successfully.')
+          // } else {
+          //   throw new Error('Failed to create new authors')
+          // }
         }
 
         // 合并作者
