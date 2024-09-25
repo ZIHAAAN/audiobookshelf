@@ -550,6 +550,7 @@ class ApiRouter {
   }
 
   async createAuthorsAndSeriesForItemUpdate(mediaPayload, libraryId) {
+    let newlyCreatedAuthors = []
     if (mediaPayload.metadata) {
       const mediaMetadata = mediaPayload.metadata
 
@@ -581,6 +582,7 @@ class ApiRouter {
               author.setData(mediaMetadata.authors[i], libraryId)
               Logger.debug(`[ApiRouter] Created new author "${author.name}"`)
               newAuthors.push(author)
+              newlyCreatedAuthors.push(author)
               // Update filter data
               Database.addAuthorToFilterData(libraryId, author.name, author.id)
             }
@@ -650,6 +652,8 @@ class ApiRouter {
         }
       }
     }
+
+    return newlyCreatedAuthors
   }
 }
 module.exports = ApiRouter

@@ -122,67 +122,38 @@ export default {
     async confirm() {
       try {
         const selectedAuthors = this.authorCopy.authors
-        console.log('Selected authors before creation:', selectedAuthors)
-
-        // 获取 libraryId 并确认它存在
-        const libraryId = this.author.libraryId
-        if (!libraryId) {
-          console.error('Library ID not found')
-          return
-        }
-        console.log('Library ID:', libraryId) // 打印 libraryId
-
-        // 检查是否有新作者
         const newAuthors = selectedAuthors.filter((author) => !author.id || author.id.startsWith('new'))
-        console.log('New authors to be created:', newAuthors)
 
-        let authorIds = selectedAuthors.map((author) => author.id)
+        let authorIds = selectedAuthors
+          .filter((author) => author.id && !author.id.startsWith('new'))
+          .map((author) => author.id);
 
         if (newAuthors.length) {
           const mediaPayload = {
             metadata: {
               authors: selectedAuthors.map((author) => ({
-                name: author.name, // 确保作者名称被传递
-                id: author.id || null // 如果有 ID，则传递，否则为空
+                name: author.name,
+                id: author.id || null
               }))
             }
           }
-          console.log('Media Payload:', mediaPayload)
 
-          const createdAuthor = await this.$axios.$post(`/api/authors/${this.author.id}/createNew`, mediaPayload)
-          console.log('Created authors returned:',createdAuthor)
-
-          // if (createdAuthors && createdAuthors.length > 0) {
-          //   // 将返回的新作者 ID 添加到原有的 authorIds 中
-          //   const newAuthorIds = createdAuthors.map((author) => author.id)
-          //
-          //   // 更新 authorIds，替换掉临时的 new IDs
-          //   authorIds = authorIds.map((id) => (id.startsWith('new') ? newAuthorIds.shift() : id))
-          //
-          //   // 确保新作者的 ID 被更新到 selectedAuthors 中
-          //   newAuthors.forEach((author, index) => {
-          //     author.id = newAuthorIds[index]
-          //   })
-          //
-          //   console.log('New authors created successfully.')
-          // } else {
-          //   throw new Error('Failed to create new authors')
-          // }
+          const createdAuthors = await this.$axios.$post(`/api/authors/${this.author.id}/createNew`, mediaPayload)
+          const createdAuthorIds = createdAuthors.map((author) => author.id);
+          authorIds = [...authorIds.filter(id => !!id), ...createdAuthorIds];
         }
 
-        // 合并作者
-        console.log('Final Author IDs to be combined:', authorIds)
-
+        console.log('Final Author IDs:', authorIds)
         await this.$axios.post(`/api/authors/${this.author.id}/combined_alias`, {
           originalAuthors: authorIds
         })
 
-        this.$toast.success('Authors combined successfully')
+        this.$toast.success(`Successfully add original authors to ${this.author.name}`)
       } catch (error) {
         console.error('Error combining authors:', error)
         this.$toast.error('Failed to combine authors')
       }
-      // 关闭模态框
+
       this.$emit('input', false)
     }
   },

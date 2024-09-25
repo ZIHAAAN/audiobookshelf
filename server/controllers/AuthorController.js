@@ -688,8 +688,8 @@ class AuthorController {
 
       const mediaPayload = req.body
 
-      await this.createAuthorsAndSeriesForItemUpdate(mediaPayload, author.libraryId)
-      return res.status(200).send('successfully create')
+      const newlyCreatedAuthors = await this.createAuthorsAndSeriesForItemUpdate(mediaPayload, author.libraryId)
+      return res.status(200).json(newlyCreatedAuthors)
     }
     catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
