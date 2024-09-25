@@ -45,6 +45,16 @@
               </nuxt-link>
             </div>
           </div>
+          <div v-else-if="author.combinedAlias.length !== 0" class="mb-4">
+            <p class="text-white text-opacity-60 text-xs mb-2">Author {{ author.name }} has following combined alias</p>
+            <div v-for="combinedAlias in author.combinedAlias" :key="combinedAlias.id">
+              <nuxt-link :to="`/author/${combinedAlias.id}`">
+                <div class="inline-block alias-box p-2 rounded mb-2 text-white">
+                  {{ combinedAlias.name }}
+                </div>
+              </nuxt-link>
+            </div>
+          </div>
 
           <p v-if="author.description" class="text-white text-opacity-60 uppercase text-xs mb-2">{{ $strings.LabelDescription }}</p>
           <p ref="description" id="author-description" class="text-white max-w-3xl text-base whitespace-pre-wrap" :class="{ 'show-full': showFullDescription }">{{ author.description }}</p>
@@ -81,10 +91,14 @@ export default {
       console.error('Failed to get author', error)
       return null
     })
-    const originalAuthor = await app.$axios.$get(`/api/authors/${author.is_alias_of}?include=items,series`).catch((error) => {
-      console.error('Failed to get original author', error)
-      return null
-    })
+    let originalAuthor = null
+    if (author.is_alias_of != null && author.is_alias_of != 0) {
+      originalAuthor = await app.$axios.$get(`/api/authors/${author.is_alias_of}?include=items,series`).catch((error) => {
+        console.error('Failed to get original author', error)
+        return null
+      })
+    }
+
     const aliases = await app.$axios.$get(`/api/authors/${params.id}/alias`).catch((error) => {
       console.error('Failed to get aliases', error)
       return null
@@ -94,11 +108,11 @@ export default {
       return null
     })
 
-    // const combinedAlias = await app.$axios.$get(`/api/authors/${params.id}/combined_alias`).catch((error) => {
-    //   console.error('Failed to get combined alias', error)
-    //   return null
-    // })
-    // console.log('combinedAlias----------------------', combinedAlias)
+    const combinedAlias = await app.$axios.$get(`/api/authors/${params.id}/combined_alias`).catch((error) => {
+      console.error('Failed to get combined alias', error)
+      return null
+    })
+    //console.log('combinedAlias----------------------', combinedAlias)
 
     if (!author) {
       return redirect(`/library/${store.state.libraries.currentLibraryId}/authors`)
@@ -113,7 +127,8 @@ export default {
         ...author,
         originalAuthor: originalAuthor || null,
         aliases: aliases || [],
-        combinedOriginalAuthor
+        combinedOriginalAuthor,
+        combinedAlias: combinedAlias
       }
     }
   },
