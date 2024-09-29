@@ -10,6 +10,7 @@ const CoverManager = require('../managers/CoverManager')
 const AuthorFinder = require('../finders/AuthorFinder')
 
 const { reqSupportsWebp, isValidASIN } = require('../utils/index')
+const { where } = require('sequelize')
 
 const naturalSort = createNewSortInstance({
   comparer: new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare
@@ -396,6 +397,7 @@ class AuthorController {
       if (!aliases.length) {
         return res.status(200).json([])
       }
+
       const aliasesArr = aliases.map((alias) => ({
         id: alias.id,
         name: alias.name
@@ -449,31 +451,60 @@ class AuthorController {
    */
   async deleteAlias(req, res) {
     try {
-      const { name } = req.body
-      if (!name) {
-        return res.status(400).send('Missing name')
-      }
-
       const authorId = req.params.id
       const author = await Database.authorModel.findByPk(authorId)
       if (!author) {
         return res.status(404).send('Author not found')
       }
 
-      const alias = await Database.authorModel.findOne({
-        where: {
-          is_alias_of: authorId,
-          name: name
-        }
-      })
-      if (!alias) {
-        return res.status(404).send('Alias not found')
+      const authorToDelete = await Database.authorModel.findByPk(req.body.id)
+      if (!authorToDelete) {
+        return res.status(404).send('Author not found')
       }
-      await alias.update({ is_alias_of: null })
-      return res.status(200).json({
-        message: 'Successfully unlinked the alias'
-      })
-    } catch (error) {
+
+      if (author.is_alias_of === null) {
+        if (authorToDelete.is_alias_of === 0) {
+          await Database.authorCombinedAliasModel.destroy({
+            where: {
+              authorId: authorId,
+              aliasId: authorToDelete.id
+            }
+          })
+
+          const remainingAliases = await Database.authorCombinedAliasModel.findAll({
+            where: {
+              aliasId: authorToDelete.id
+            }
+          })
+          if (!remainingAliases.length) {
+            await authorToDelete.update({is_alias_of: null})
+          }
+        } else {
+          await authorToDelete.update({is_alias_of: null})
+        }
+      }
+      else if (author.is_alias_of === 0) {
+        await Database.authorCombinedAliasModel.destroy({
+          where: {
+            authorId: authorToDelete.id,
+            aliasId: authorId
+          }
+        })
+        const remainingAliases = await Database.authorCombinedAliasModel.findAll({
+          where: {
+            aliasId: authorId
+          }
+        })
+        if (!remainingAliases.length) {
+          await author.update({is_alias_of: null})
+        }
+      }
+      else {
+        await author.update({is_alias_of: null})
+      }
+      return res.status(200).send('Successfully unlink the alias relation')
+    }
+    catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')
     }
@@ -609,7 +640,7 @@ class AuthorController {
       })
 
       if (data.length === 0) {
-        return res.status(204).send('No combined alias found for this author')
+        return res.status(200).json([])
       }
 
       const aliasIds = data.map((data) => data.aliasId)
@@ -623,45 +654,6 @@ class AuthorController {
 
       //return res.status(200).json(aliasIds)
       return res.status(200).json(combinedAliases)
-    } catch (error) {
-      Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
-      res.status(500).send('Internal Server Error')
-    }
-  }
-
-  /**
-   * DELETE: api/authors/combined_alias
-   *
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async deleteCombinedAlias(req, res) {
-    if (!req.body) {
-      return res.status(400).send('Missing request body')
-    }
-
-    const { authorId, aliasId } = req.body
-    try {
-      const deleteResult = await Database.authorCombinedAliasModel.destroy({
-        where: {
-          authorId: authorId,
-          aliasId: aliasId
-        }
-      })
-
-      if (deleteResult === 0) {
-        return res.status(404).send('Combination not found')
-      }
-
-      const remainingAliases = await Database.authorCombinedAliasModel.count({
-        where: { aliasId: aliasId }
-      })
-
-      if (remainingAliases === 0) {
-        await Database.authorModel.update({ is_alias_of: null }, { where: { id: aliasId } })
-      }
-
-      return res.status(200).send('Alias combination deleted successfully')
     } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
       res.status(500).send('Internal Server Error')

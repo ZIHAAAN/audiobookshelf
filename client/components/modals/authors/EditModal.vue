@@ -30,85 +30,54 @@
                 <ui-text-input-with-label v-model="authorCopy.asin" :disabled="processing" label="ASIN" />
               </div>
             </div>
-
-            <div v-if="authorCopy.aliases.length > 0" class="p-2">
-              <!-- <p class="text-white text-opacity-60 uppercase text-xs mb-2">Aliases:</p>
-              <div v-for="alias in authorCopy.aliases" :key="alias" class="flex justify-between items-center m-2">
-                <span>{{ alias.name }}</span>
-                <ui-btn color="error" small type="button" @click="removeAlias(alias)">Unlink</ui-btn>
-              </div> -->
+            <div class="p-2">
+              <ui-textarea-with-label v-model="authorCopy.description" :disabled="processing" :label="$strings.LabelDescription" :rows="8" />
             </div>
 
-            <div class="p-2">
-              <h3 @click="toggleAliasDropdown" class="dropdown-icon">Author Status ▼</h3>
+            <div class="mb-2">
+              <h3 @click="toggleAliasDropdown" class="dropdown-icon"><strong>Manage Alias</strong><span class="material-symbols text-2xl">expand_more</span> </h3>
 
-              <div v-if="showAliasDropdown">
+              <div v-if="showAliasDropdown" class="m-2">
                 <p v-if="authorCopy.aliases.length > 0">{{ authorCopy.name }} has below aliases:</p>
-                <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of: {{ authorCopy.originalAuthor.name }}</p>
-                <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is a combined alias of: {{ authorCopy.originalAuthor.name }}</p>
-
+                <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of: </p>
+                <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is an alias shared by below authors: </p>
                 <p v-else>{{ authorCopy.name }} does not have any alias.</p>
 
-                <div v-if="authorCopy.aliases.length > 0" color="primary" class="alias-container">
-                  <!-- alias 列表 -->
-                  <div v-for="alias in authorCopy.aliases" :key="alias.id" class="alias-item">
+                <div v-if="authorCopy.aliases.length > 0" color="primary" class="alias-container p-2">
+                  <div v-for="alias in authorCopy.aliases" :key="alias.id" class="alias-item p-2">
                     <div class="alias-left">
-                      <span class="alias-bullet">•</span>
+                      <span class="alias-bullet">&nbsp;•&nbsp;&nbsp;&nbsp;</span>
                       <span class="alias-name">{{ alias.name }}</span>
                     </div>
                     <div class="alias-right">
-                      <span @click="removeAlias(alias)" class="delete-alias-btn">
-                        <span class="circle">
-                          <span class="cross">x</span>
-                        </span>
-                      </span>
+                      <ui-btn small color="error" type="button" @click="unlinkAliasRelation(alias)">Unlink</ui-btn>
                     </div>
                   </div>
                 </div>
 
-                <!-- Display Combined Aliases -->
-                <div v-if="authorCopy.combinedAliases.length > 0">
-                  <h4>Combined Aliases:</h4>
-
-                  <div v-for="combinedAlias in authorCopy.combinedAliases" :key="combinedAlias.id" class="alias-item">
+                <div v-if="authorCopy.originalAuthor.length > 0" color="primary" class="alias-container p-2">
+                  <div v-for="originalAuthor in authorCopy.originalAuthor" :key="originalAuthor.id" class="alias-item p-2">
                     <div class="alias-left">
-                      <span class="alias-bullet">•</span>
-                      <span class="alias-name">{{ combinedAlias.name }}</span>
-                      <!-- <ui-btn color="error" small type="button" @click="removeCombinedAlias(combinedAlias)">Delete Combined Alias</ui-btn> -->
+                      <span class="alias-bullet">&nbsp;•&nbsp;&nbsp;&nbsp;</span>
+                      <span class="alias-name">{{ originalAuthor.name }}</span>
                     </div>
                     <div class="alias-right">
-                      <span @click="removeCombinedAlias(combinedAlias)" class="delete-alias-btn">
-                        <span class="circle">
-                          <span class="cross">x</span>
-                        </span>
-                      </span>
+                      <ui-btn small color="error" type="button" @click="unlinkAliasRelation(originalAuthor)">Unlink</ui-btn>
                     </div>
                   </div>
                 </div>
-                <!-- 如果 currentAuthorStatus 是 Alias 或 Combined Alias，显示 "Add Original Author" -->
-                <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="p-2 flex">
-                  <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn"> Add Original Author </ui-btn>
+
+                <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="flex">
+                  <ui-btn type="button" color="success" small @click="openCombineModal" class="combined-alias-btn">Add more ...</ui-btn>
                 </div>
-
-                <!-- 如果 currentAuthorStatus 是 Original Author，显示 "Add Alias" -->
-                <div v-if="currentAuthorStatus === 'Original Author'" class="p-2 flex">
-                  <ui-text-input class="h-9 w-40" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                  <ui-btn class="add-alias-btn ml-2 sm:ml-3 w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
+                <div v-if="currentAuthorStatus === 'Original Author'" class="flex">
+                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add more ...</ui-btn>
                 </div>
-
-                <div v-if="currentAuthorStatus === 'Unknown'" class="p-2 flex items-center">
-                  <ui-btn color="primary" type="button" @click="openCombineModal" class="combined-alias-btn mr-4"> Add Original Author </ui-btn>
-
-                  <div class="flex items-center">
-                    <ui-text-input class="h-9 w-40 mr-2" v-model="newAlias" :disabled="processing" placeholder="Enter alias" />
-                    <ui-btn class="add-alias-btn w-18 h-9 items-center" color="success" type="button" @click="addAlias" :disabled="processing || !newAlias"> ADD </ui-btn>
-                  </div>
+                <div v-if="currentAuthorStatus === 'Unknown'" class="flex items-center">
+                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add Alias</ui-btn>
+                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add Original Author</ui-btn>
                 </div>
               </div>
-            </div>
-
-            <div class="p-2">
-              <ui-textarea-with-label v-model="authorCopy.description" :disabled="processing" :label="$strings.LabelDescription" :rows="8" />
             </div>
 
             <div class="flex pt-2 px-2">
@@ -132,8 +101,8 @@
 
 <script>
 import CombineAliasModal from './CombineAliasModal.vue'
-
 import NewCombineAliasModal from './NewCombineAliasModal.vue'
+
 export default {
   components: {
     CombineAliasModal,
@@ -146,20 +115,17 @@ export default {
       isLoading: false,
       newAlias: '',
       // filteredAuthors: [], //When add an alias, it matches the database for an existing author with similar name
-      //authors: [], // 这里是 v-model 绑定的数组
       authorCopy: {
         name: '',
         asin: '',
         description: '',
         aliases: [],
-        combinedAliases: [],
-        originalAuthor: null
+        originalAuthor: []
       },
       imageUrl: '',
       currentAuthorStatus: '',
       showAliasDropdown: false,
       processing: false
-      //selectedAuthor: null
     }
   },
   watch: {
@@ -167,12 +133,10 @@ export default {
       immediate: true,
       handler(newVal) {
         if (newVal) {
-          //this.init()
           this.authorCopy = {
             ...newVal,
             aliases: newVal.aliases || [],
-            combinedAliases: newVal.combinedAliases || [],
-            originalAuthor: newVal.originalAuthor || null
+            originalAuthor: newVal.originalAuthor || []
           }
           this.checkAuthorStatus()
         }
@@ -180,9 +144,6 @@ export default {
     }
   },
   computed: {
-    authorStatusText() {
-      return this.currentAuthorStatus || 'Unknown'
-    },
     show: {
       get() {
         return this.$store.state.globals.showEditAuthorModal
@@ -212,45 +173,37 @@ export default {
     }
   },
   methods: {
-    // forceBlur() {
-    //   if (this.$refs.authorsSelect && this.$refs.authorsSelect.isFocused) {
-    //     this.$refs.authorsSelect.forceBlur()
-    //   }
-    // },
     toggleAliasDropdown() {
       this.showAliasDropdown = !this.showAliasDropdown
     },
-    // 判断作者状态
     async checkAuthorStatus() {
       if (this.author.is_alias_of === null) {
-        await this.checkIfOriginalAuthor() // 检查是否为Original Author
+        await this.checkIfOriginalAuthor()
       } else if (this.author.is_alias_of === 0) {
         this.currentAuthorStatus = 'Combined Alias'
-        await this.fetchOriginalAuthors() // 获取组合作者的信息
+        await this.fetchOriginalAuthors()
       } else {
         this.currentAuthorStatus = 'Alias'
-        await this.fetchOriginAuthor() // 获取原始作者
+        await this.fetchOriginAuthor()
       }
     },
     async checkIfOriginalAuthor() {
       const aliases = await this.fetchAliases()
+      const combinedAliases = await this.fetchCombinedAliases()
 
-      let combinedAliases = [] // 先设置默认空数组
-      // 只有在没有 alias 的情况下才尝试获取 combined aliases
-      if (aliases.length === 0) {
-        combinedAliases = await this.fetchCombinedAliases()
-      }
-
-      //const combinedAliases = await this.fetchCombinedAliases()
       if (aliases.length > 0 || combinedAliases.length > 0) {
         this.currentAuthorStatus = 'Original Author'
-        this.authorCopy.aliases = aliases
-        this.authorCopy.combinedAliases = combinedAliases
+        if (combinedAliases.length > 0) {
+          combinedAliases.forEach((alias) => {
+            alias.name = `${alias.name} (shared with other authors)`
+          })
+        }
+        this.authorCopy.aliases = [...aliases, ...combinedAliases]
       } else {
         this.currentAuthorStatus = 'Unknown'
+        this.authorCopy.aliases = []
       }
     },
-    // Fetch aliases from API
     async fetchAliases() {
       try {
         const aliases = await this.$axios.$get(`/api/authors/${this.authorId}/alias`)
@@ -261,8 +214,6 @@ export default {
         return []
       }
     },
-
-    // Fetch combined aliases from API
     async fetchCombinedAliases() {
       try {
         const combinedAliases = await this.$axios.$get(`/api/authors/${this.authorId}/combined_alias`)
@@ -271,46 +222,31 @@ export default {
       } catch (error) {
         if (error.response && error.response.status === 404) {
           console.warn('No combined alias found for this author')
-          return [] // 返回空数组，表示没有找到组合别名
+          return []
         } else {
           console.error('Error fetching combined aliases:', error)
           return []
         }
       }
     },
-
-    // Fetch original authors
     async fetchOriginalAuthors() {
       try {
         const originalAuthors = await this.$axios.$get(`/api/authors/${this.authorId}/origins`)
         console.log('Fetched original authors:', originalAuthors)
-        if (originalAuthors.length > 0) {
-          this.authorCopy.originalAuthor = originalAuthors[0]
-        }
+        this.authorCopy.originalAuthor = originalAuthors
       } catch (error) {
         console.error('Failed to fetch original authors:', error)
       }
     },
-
-    // Fetch origin author if the author is an alias
     async fetchOriginAuthor() {
       try {
         const originAuthor = await this.$axios.$get(`/api/authors/${this.authorId}/origin`)
         console.log('Fetched origin author:', originAuthor)
-        this.authorCopy.originalAuthor = originAuthor
+        this.authorCopy.originalAuthor.push(originAuthor)
       } catch (error) {
         console.error('Failed to fetch origin author:', error)
       }
     },
-    // init() {
-    //   this.imageUrl = ''
-    //   this.authorCopy = {
-    //     ...this.author,
-    //     aliases: this.author.aliases || [],
-    //     authors: (this.author.authors || []).map((se) => ({ ...se })), // 初始化时填充作者列表
-    //     originalAuthor: this.author.originalAuthor || null
-    //   }
-    // },
     removeClick() {
       const payload = {
         message: this.$getString('MessageConfirmRemoveAuthor', [this.author.name]),
@@ -337,6 +273,7 @@ export default {
       this.$store.commit('globals/setConfirmPrompt', payload)
     },
     async submitForm() {
+      //TODO: check source code
       //this.forceBlur()
       var keysToCheck = ['name', 'asin', 'description', 'authors']
       var updatePayload = {}
@@ -376,22 +313,6 @@ export default {
       }
       this.processing = false
     },
-    // objectArrayEqual(array1, array2) {
-    //   if (!Array.isArray(array1) || !Array.isArray(array2)) return false
-    //   if (array1.length !== array2.length) return false
-
-    //   for (let i = 0; i < array1.length; i++) {
-    //     const item1 = array1[i]
-    //     const item2 = array2[i]
-
-    //     // 比较每个对象的属性
-    //     if (item1.id !== item2.id || item1.name !== item2.name) {
-    //       return false
-    //     }
-    //   }
-
-    //   return true
-    // },
     removeCover() {
       this.processing = true
       this.$axios
@@ -472,54 +393,19 @@ export default {
       }
       this.processing = false
     },
-    async removeAlias(alias) {
-      this.processing = true
+    async unlinkAliasRelation(author) {
       try {
-        await this.$axios.$delete(`/api/authors/${this.authorId}/alias`, {
-          data: { name: alias.name }
+        console.log('Author to be unlink: ' + author.name)
+        console.log(this.authorId)
+        await this.$axios.$delete(`/api/authors/${this.authorId}/alias`, { data: author }).catch((error) => {
+          console.error('Failed to unlink alias relation', error)
         })
-        this.authorCopy.aliases = this.authorCopy.aliases.filter((a) => a.name !== alias.name)
-        this.$toast.success('Alias removed successfully')
+        this.authorCopy.aliases = this.authorCopy.aliases.filter(alias => alias.id !== author.id)
+        this.authorCopy.originalAuthor = this.authorCopy.originalAuthor.filter(original => original.id !== author.id)
+        this.$toast.success('Successfully unlink alias')
       } catch (error) {
         console.error('Failed to remove alias', error)
-        this.$toast.error('Failed to remove alias')
-      } finally {
-        this.processing = false
-      }
-    },
-    // Remove combined alias
-    async removeCombinedAlias(combinedAlias) {
-      this.processing = true
-      try {
-        await this.$axios.$delete(`/api/authors/${this.author.id}/combined_alias`, {
-          data: {
-            authorId: this.author.id,
-            aliasId: combinedAlias.id
-          }
-        })
-        // 从 combinedAliases 数组中过滤掉已删除的 alias
-        this.authorCopy.combinedAliases = this.authorCopy.combinedAliases.filter((a) => a.id !== combinedAlias.id)
-        this.$toast.success('Combined Alias removed successfully')
-      } catch (error) {
-        this.$toast.error('Failed to remove combined alias')
-      } finally {
-        this.processing = false
-      }
-    },
-    async addAlias() {
-      if (!this.newAlias.trim()) return
-
-      this.processing = true
-      try {
-        const response = await this.$axios.$post(`/api/authors/${this.authorId}/alias`, { name: this.newAlias })
-        this.authorCopy.aliases.push(response.alias)
-        this.newAlias = ''
-        this.$toast.success('Alias added successfully')
-      } catch (error) {
-        console.error('Failed to add alias', error)
-        this.$toast.error('Failed to add alias')
-      } finally {
-        this.processing = false
+        this.$toast.error('Failed to unlink alias')
       }
     },
     openCombineModal() {
@@ -539,11 +425,6 @@ export default {
     },
     closeCombineModal() {
       this.showCombineModal = false
-    },
-    saveAuthors(authors) {
-      // 这里可以处理保存后的逻辑，比如更新作者信息
-      console.log('Selected Authors:', authors)
-      this.closeCombineModal()
     },
     openNewCombineModal() {
       // 点击按钮时打开模态框
@@ -573,13 +454,6 @@ export default {
   padding-right: 0;
 }
 
-.combined-alias-btn {
-  white-space: nowrap;
-  background-color: rgb(99, 161, 99);
-  padding: 0.5rem 1rem;
-  width: fit-content;
-  font-size: 1rem;
-}
 .author-status-text {
   font-weight: bold;
 }
