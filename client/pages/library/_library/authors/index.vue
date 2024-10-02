@@ -130,18 +130,14 @@ export default {
       this.authors = this.authors.filter((au) => au.id !== author.id)
     },
     editAuthor(author) {
-      console.log('Selected Author:', author)
-      // this.confirmMerge(() => {
       this.$store.commit('globals/showEditAuthorModal', author)
-      //   })
     },
     async handleSelect({ author, isSelected }) {
       console.log('author id:' + author.id + ' Select state:' + isSelected)
       if (isSelected) {
         if (!this.selectedAuthors.some((selectedAuthor) => selectedAuthor.id === author.id)) {
-          // 在此处调用 API 获取 alias 信息
           const alias = await this.fetchAuthorAlias(author.id)
-          author.alias = alias || [] // 将 alias 信息添加到 author 对象中
+          author.alias = alias || []
 
           this.selectedAuthors.push(author)
         }

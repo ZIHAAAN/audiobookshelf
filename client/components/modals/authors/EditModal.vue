@@ -68,14 +68,14 @@
                 </div>
 
                 <div v-if="currentAuthorStatus === 'Alias' || currentAuthorStatus === 'Combined Alias'" class="flex">
-                  <ui-btn type="button" color="success" small @click="openCombineModal" class="combined-alias-btn">Add more ...</ui-btn>
+                  <ui-btn type="button" color="success" small @click="openAddOriginModal" class="combined-alias-btn">Add more ...</ui-btn>
                 </div>
                 <div v-if="currentAuthorStatus === 'Original Author'" class="flex">
-                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add more ...</ui-btn>
+                  <ui-btn type="button" small color="success" @click="openAddAliasModal" class="combined-alias-btn">Add more ...</ui-btn>
                 </div>
                 <div v-if="currentAuthorStatus === 'Unknown'" class="flex items-center">
-                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add Alias</ui-btn>
-                  <ui-btn type="button" small color="success" @click="openCombineModal" class="combined-alias-btn">Add Original Author</ui-btn>
+                  <ui-btn type="button" small color="success" @click="openAddAliasModal" class="combined-alias-btn">Add Alias</ui-btn>
+                  <ui-btn type="button" small color="success" @click="openAddOriginModal" class="combined-alias-btn">Add Original Author</ui-btn>
                 </div>
               </div>
             </div>
@@ -91,30 +91,27 @@
         </div>
       </div>
     </div>
-    <!--
-    <CombineAliasModal v-if="showCombineModal" v-model="showCombineModal" :author="authorCopy" :original-authors="authorCopy.originalAuthor" :combined-aliases="authorCopy.combinedAliases" /> -->
     <CombineAliasModal v-if="!isLoading && showCombineModal" v-model="showCombineModal" :author="authorCopy" />
-    <NewCombineAliasModal v-model="showNewCombineModal" />
+    <AddAliasModal v-if="!isLoading && showAddAliasModal" v-model="showAddAliasModal" :author="authorCopy" />
   </modals-modal>
 </template>
 
 
 <script>
-import CombineAliasModal from './CombineAliasModal.vue'
-import NewCombineAliasModal from './NewCombineAliasModal.vue'
+import CombineAliasModal from './AddOriginModal.vue'
+import AddAliasModal from '@/components/modals/authors/AddAliasModal.vue'
 
 export default {
   components: {
+    AddAliasModal,
     CombineAliasModal,
-    NewCombineAliasModal
   },
   data() {
     return {
       showCombineModal: false,
-      showNewCombineModal: false,
+      showAddAliasModal: false,
       isLoading: false,
       newAlias: '',
-      // filteredAuthors: [], //When add an alias, it matches the database for an existing author with similar name
       authorCopy: {
         name: '',
         asin: '',
@@ -193,11 +190,6 @@ export default {
 
       if (aliases.length > 0 || combinedAliases.length > 0) {
         this.currentAuthorStatus = 'Original Author'
-        if (combinedAliases.length > 0) {
-          combinedAliases.forEach((alias) => {
-            alias.name = `${alias.name} (shared with other authors)`
-          })
-        }
         this.authorCopy.aliases = [...aliases, ...combinedAliases]
       } else {
         this.currentAuthorStatus = 'Unknown'
@@ -242,7 +234,7 @@ export default {
       try {
         const originAuthor = await this.$axios.$get(`/api/authors/${this.authorId}/origin`)
         console.log('Fetched origin author:', originAuthor)
-        this.authorCopy.originalAuthor.push(originAuthor)
+        this.authorCopy.originalAuthor = [originAuthor]
       } catch (error) {
         console.error('Failed to fetch origin author:', error)
       }
@@ -408,40 +400,14 @@ export default {
         this.$toast.error('Failed to unlink alias')
       }
     },
-    openCombineModal() {
-      //  this.author = this.authorCopy // 确保你有正确的数据传递
-      // this.authorCopy.aliases = this.authorCopy.aliases || []
-      // this.authorCopy.combinedAliases = this.authorCopy.combinedAliases || []
-      // this.authorCopy.originalAuthor = this.authorCopy.originalAuthor || null
-      // this.authorCopy = {
-      //   ...this.author,
-      //   aliases: this.author.aliases || [],
-      //   combinedAliases: this.author.combinedAliases || [],
-      //   originalAuthor: this.author.originalAuthor || []
-      // }
-      console.log('Opening Combine Alias Modal')
+    openAddOriginModal() {
       this.showCombineModal = true
-      console.log('showCombineModal (父组件):', this.showCombineModal)
     },
-    closeCombineModal() {
-      this.showCombineModal = false
-    },
-    openNewCombineModal() {
-      // 点击按钮时打开模态框
-      this.authorCopy = {
-        ...this.author,
-        aliases: this.author.aliases || [],
-        combinedAliases: this.author.combinedAliases || [],
-        originalAuthor: this.author.originalAuthor || null
-      }
-      console.log('Opening Combine Alias Modal with authorCopy11111:', this.authorCopy)
-      this.showNewCombineModal = true
-      console.log('showNewCombineModal:', this.showNewCombineModal)
+    openAddAliasModal() {
+      this.showAddAliasModal = true
     }
   },
   mounted() {
-    console.log('showCombineModal status:', this.show)
-    console.log('CombineAliasModal mounted')
     this.$emit('input', true)
   },
   beforeDestroy() {}

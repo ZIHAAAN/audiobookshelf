@@ -279,13 +279,13 @@ export default {
       this.details.explicit = !!this.mediaMetadata.explicit
       this.details.abridged = !!this.mediaMetadata.abridged
       this.newTags = [...(this.media.tags || [])]
+      console.log(this.details.authors)
     },
     submitForm() {
       this.$emit('submit')
     }
   },
   mounted() {
-    console.log('当前组件已加载', this.$parent)
   }
 }
 </script>

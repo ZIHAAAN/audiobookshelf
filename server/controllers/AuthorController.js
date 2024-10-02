@@ -11,6 +11,7 @@ const AuthorFinder = require('../finders/AuthorFinder')
 
 const { reqSupportsWebp, isValidASIN } = require('../utils/index')
 const { where } = require('sequelize')
+const alias = require('../objects/Feed')
 
 const naturalSort = createNewSortInstance({
   comparer: new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare
@@ -417,29 +418,121 @@ class AuthorController {
    */
   async addAlias(req, res) {
     try {
-      const { name } = req.body
-      if (!name) {
-        return res.status(400).send('Missing name')
-      }
-
       const authorId = req.params.id
       const author = await Database.authorModel.findByPk(authorId)
       if (!author) {
         return res.status(404).send('Author not found')
       }
 
-      const newAlias = await Database.authorModel.create({
-        name: name,
-        libraryId: author.libraryId,
-        is_alias_of: authorId
-      })
-      return res.status(201).json({
-        message: 'Successfully created a new alias',
-        alias: newAlias
-      })
+      const { aliases } = req.body
+      if (!aliases) {
+        return res.status(400).json({ error: 'Missing request body' })
+      }
+
+      for (let i = 0; i < aliases.length; i++) {
+        let aliasId = aliases[i]
+        let alias = await Database.authorModel.findByPk(aliasId)
+
+        if (alias.is_alias_of === null) {
+          const result1 = await Database.authorModel.findAll({
+            where: {is_alias_of: alias.id}
+          })
+          const result2 = await Database.authorCombinedAliasModel.findAll({
+            where: {authorId: alias.id}
+          })
+          if (result1.length > 0 || result2.length > 0) {
+            return res.status(409).json({ message: `${alias.name} is an original author of other alias.`})
+          } else {
+            await alias.update({is_alias_of: authorId})
+          }
+        }
+
+        else if (alias.is_alias_of === 0) {
+          const checkExist = await Database.authorCombinedAliasModel.findOne({
+          where: {
+            authorId: authorId,
+            aliasId: alias.id
+          }
+        })
+          if (!checkExist) {
+            await Database.authorCombinedAliasModel.create({
+              authorId: authorId,
+              aliasId: alias.id,
+              createdAt: new Date()
+            })
+          }
+        }
+
+        else {
+          if (!(alias.is_alias_of === authorId)) {
+            await Database.authorCombinedAliasModel.create({
+              authorId:alias.is_alias_of,
+              aliasId: alias.id,
+              createdAt: new Date()
+            })
+            await alias.update({is_alias_of: 0})
+
+            await Database.authorCombinedAliasModel.create({
+              authorId: authorId,
+              aliasId: alias.id,
+              createdAt: new Date()
+            })
+          }
+        }
+
+      }
+
+      return res.status(200).json({ message: 'Successfully add alias' })
     } catch (error) {
       Logger.error(`[AuthorController] Error adding alias: ${error.message}`)
       return res.status(500).send('Internal Server Error')
+    }
+  }
+
+  /**
+   * POST: api/authors/:id/combined_alias
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async addOriginalAuthors(req, res) {
+    try {
+      const authorId = req.params.id
+      const author = await Database.authorModel.findByPk(authorId)
+      if (!author) {
+        return res.status(404).send('Author not found')
+      }
+
+      const { originalAuthors } = req.body
+      if (!originalAuthors) {
+        return res.status(400).json({ error: 'Missing request body' })
+      }
+
+      if (author.is_alias_of !== 0 && author.is_alias_of !== null) {
+        await Database.authorCombinedAliasModel.create({
+          authorId: author.is_alias_of,
+          aliasId: author.id
+        })
+        await author.update({is_alias_of: 0})
+      }
+
+      for (let i = 0; i < originalAuthors.length; i++) {
+        let originalAuthorId = originalAuthors[i]
+        let originalAuthor = await Database.authorModel.findByPk(originalAuthorId)
+
+        if (originalAuthors.is_alias_of) {
+          return res.status(409).json({ message: `${originalAuthor.name} is an alias of other author.` })
+        }
+
+        await Database.authorCombinedAliasModel.create({
+          authorId: originalAuthorId,
+          aliasId: authorId,
+          createdAt: new Date()
+        })
+      }
+      return res.status(200).json({ message: 'Successfully add original author' })
+    } catch (error) {
+      res.status(500).send('Internal Server Error')
     }
   }
 
@@ -533,46 +626,6 @@ class AuthorController {
       return res.status(200).json(originAuhtor)
     } catch (error) {
       Logger.error(`[AuthorController] Error deleting alias: ${error.message}`)
-      res.status(500).send('Internal Server Error')
-    }
-  }
-
-  /**
-   * POST: api/authors/:id/combined_alias
-   *
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async markAsCombinedAlias(req, res) {
-    try {
-      const authorId = req.params.id
-      const author = await Database.authorModel.findByPk(authorId)
-      if (!author) {
-        return res.status(404).send('Author not found')
-      }
-
-      const { originalAuthors } = req.body
-      if (!originalAuthors || !Array.isArray(originalAuthors) || originalAuthors.length === 0) {
-        return res.status(400).json({ error: 'Missing or invalid request body' })
-      }
-      for (let i = 0; i < originalAuthors.length; i++) {
-        let originalAuthorId = originalAuthors[i]
-        let originalAuthor = await Database.authorModel.findByPk(originalAuthorId)
-        if (!originalAuthor) {
-          return res.status(404).send('Original author not found')
-        }
-
-        await Database.authorCombinedAliasModel.create({
-          authorId: originalAuthorId,
-          aliasId: authorId,
-          createdAt: new Date()
-        })
-      }
-
-      author.is_alias_of = 0
-      await author.save()
-      return res.status(200).json({ message: 'Combined alias created successfully' })
-    } catch (error) {
       res.status(500).send('Internal Server Error')
     }
   }
