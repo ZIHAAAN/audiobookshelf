@@ -206,30 +206,54 @@ class AuthorController {
     }
   }
 
-  /**
-   * DELETE: /api/authors/:id
-   * Remove author from all books and delete
-   *
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
   async delete(req, res) {
-    Logger.info(`[AuthorController] Removing author "${req.author.name}"`)
-    if (!req.author.is_alias_of) {
-      await Database.authorModel.removeAllAlias(req.author.id)
-    }
-    await Database.authorModel.removeById(req.author.id)
-    if (req.author.imagePath) {
-      await CacheManager.purgeImageCache(req.author.id) // Purge cache
+    Logger.info(`[AuthorController] Removing author(s)`)
+
+    if (Array.isArray(req.body.ids) && req.body.ids.length > 0) {
+      const authorIds = req.body.ids;
+
+      for (let authorId of authorIds) {
+        const author = await Database.authorModel.findByPk(authorId);
+
+        if (!author) {
+          return res.status(404).json({ error: `Author with ID ${authorId} not found` });
+        }
+
+        if (author.is_alias_of === null) {
+          await Database.authorModel.removeAllAlias(author.id);
+        }
+
+        await Database.authorModel.removeById(author.id);
+
+        if (author.imagePath) {
+          await CacheManager.purgeImageCache(author.id);
+        }
+
+        SocketAuthority.emitter('author_removed', author.toJSON());
+        Database.removeAuthorFromFilterData(author.libraryId, author.id);
+      }
+
+      return res.sendStatus(200);
     }
 
-    SocketAuthority.emitter('author_removed', req.author.toJSON())
+    if (!req.author.is_alias_of) {
+      await Database.authorModel.removeAllAlias(req.author.id);
+    }
+
+    await Database.authorModel.removeById(req.author.id);
+
+    if (req.author.imagePath) {
+      await CacheManager.purgeImageCache(req.author.id); // Purge cache
+    }
+
+    SocketAuthority.emitter('author_removed', req.author.toJSON());
 
     // Update filter data
-    Database.removeAuthorFromFilterData(req.author.libraryId, req.author.id)
+    Database.removeAuthorFromFilterData(req.author.libraryId, req.author.id);
 
-    res.sendStatus(200)
+    res.sendStatus(200);
   }
+
 
   /**
    * POST: /api/authors/:id/image

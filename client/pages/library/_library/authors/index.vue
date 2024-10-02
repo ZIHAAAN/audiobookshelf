@@ -11,9 +11,9 @@
           </div>-->
     <div v-if="selectedAuthors.length > 0" class="toolbar fixed top-0 right-0 w-full bg-gray-900 text-white flex justify-end items-center px-4 py-2 z-50 shadow-lg rounded">
       <span class="mr-auto">{{ selectedAuthors.length }} Authors Selected</span>
-      <ui-btn class="btn-edit mx-2" @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
-      <ui-btn class="btn-delete" @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
-      <!-- </div> -->
+      <ui-btn  @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
+      <ui-btn @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
+      <ui-btn class="btn-delete" @click="deleteAuthors">Delete</ui-btn>
     </div>
     <div id="bookshelf" class="w-full h-full p-8e overflow-y-auto" :style="{ fontSize: sizeMultiplier + 'rem' }">
       <!-- Cover size widget -->
@@ -22,11 +22,8 @@
 
       <div class="flex flex-wrap justify-center">
         <template v-for="author in authorsSorted">
-          <!-- <div class="author-card-container p-3e"> -->
+
           <div :key="author.id" class="author-card-container p-3e relative" :class="{ 'highlight-border': selectedAuthors.includes(author.id) }" :data-author-id="author.id">
-            <!--    <cards-author-card :key="author.id" :author="author" @edit="editAuthor" @select="handleSelect" />
-            <cards-author-card :author="author" @edit="editAuthor" @select="handleSelect" />
-          </div> -->
 
             <div v-if="selectedAuthors.includes(author.id)" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 pointer-events-none" />
 
@@ -73,7 +70,6 @@ export default {
     return {
       loading: true,
       authors: [],
-      // selectedAuthorsMap: {},
       selectedAuthors: [],
       isMergeModalVisible: false,
       isMakeAliasModalVisible: false,
@@ -89,15 +85,6 @@ export default {
     },
     currentLibraryId() {
       return this.$store.state.libraries.currentLibraryId
-    },
-    // selectedAuthors() {
-    //   return this.authors.filter((author) => this.selectedAuthorsMap[author.id])
-    // },
-    mergeButtonClass() {
-      return this.selectedAuthors.length === 2 ? 'btn-primary' : 'btn-disabled'
-    },
-    makeAliasButtonClass() {
-      return this.selectedAuthors.length === 2 ? 'btn-primary' : 'btn-disabled'
     },
     authorSortBy() {
       return this.$store.getters['user/getUserSetting']('authorSortBy') || 'name'
@@ -154,17 +141,6 @@ export default {
     editAuthor(author) {
       this.$store.commit('globals/showEditAuthorModal', author)
     },
-    // handleAuthorSelect(author) {
-    //   const index = this.selectedAuthors.indexOf(author.id)
-    //   if (index !== -1) {
-    //     this.selectedAuthors.splice(index, 1) // 取消选择
-    //   } else {
-    //     this.selectedAuthors.push(author.id) // 选择
-    //   }
-
-    //   // 更新选择模式状态
-    //   this.isSelectionMode = this.selectedAuthors.length > 0
-    // },
     async handleSelect({ author, isSelected }) {
       console.log('author id:' + author.id + ' Select state:' + isSelected)
       if (isSelected) {
@@ -180,7 +156,6 @@ export default {
       console.log(this.selectedAuthors)
       this.isSelectionMode = this.selectedAuthors.length > 0
 
-      // 在点击小圆点时，更新选中状态并控制样式（黄框和蒙版）
       this.$nextTick(() => {
         const authorCardContainer = document.querySelector(`.author-card-container[data-author-id="${author.id}"]`)
 
@@ -193,7 +168,6 @@ export default {
         }
       })
     },
-
     async fetchAuthorAlias(authorId) {
       try {
         const token = this.$store.getters['user/getToken']
@@ -204,7 +178,6 @@ export default {
         })
         return response.data
       } catch (error) {
-        console.error('Failed to fetch author alias:', error)
         return []
       }
     },
@@ -224,6 +197,20 @@ export default {
     },
     closeMakeAliasModal() {
       this.isMakeAliasModalVisible = false
+    },
+    async deleteAuthors() {
+      const authorIds = this.selectedAuthors.map(author => author.id);
+
+      try {
+        await this.$axios.delete(`/api/authors/${authorIds[0]}`, {
+          data: { ids: authorIds }
+        });
+
+        this.$toast.success('Authors deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete authors:', error);
+        this.$toast.error('Failed to delete authors');
+      }
     }
   },
   mounted() {
