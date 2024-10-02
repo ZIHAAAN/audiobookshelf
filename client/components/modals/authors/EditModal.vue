@@ -35,12 +35,12 @@
             </div>
 
             <div class="mb-2">
-              <h3 @click="toggleAliasDropdown" class="dropdown-icon"><strong>Manage Alias</strong><span class="material-symbols text-2xl">expand_more</span> </h3>
+              <h3 @click="toggleAliasDropdown" class="dropdown-icon"><strong>Manage Alias</strong><span class="material-symbols text-2xl">expand_more</span></h3>
 
               <div v-if="showAliasDropdown" class="m-2">
                 <p v-if="authorCopy.aliases.length > 0">{{ authorCopy.name }} has below aliases:</p>
-                <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of: </p>
-                <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is an alias shared by below authors: </p>
+                <p v-else-if="currentAuthorStatus === 'Alias'">{{ authorCopy.name }} is an alias of:</p>
+                <p v-else-if="currentAuthorStatus === 'Combined Alias'">{{ authorCopy.name }} is an alias shared by below authors:</p>
                 <p v-else>{{ authorCopy.name }} does not have any alias.</p>
 
                 <div v-if="authorCopy.aliases.length > 0" color="primary" class="alias-container p-2">
@@ -119,6 +119,7 @@ export default {
         aliases: [],
         originalAuthor: []
       },
+
       imageUrl: '',
       currentAuthorStatus: '',
       showAliasDropdown: false,
@@ -264,19 +265,57 @@ export default {
       }
       this.$store.commit('globals/setConfirmPrompt', payload)
     },
+    // async submitForm() {
+    //   //TODO: check source code
+    //   //this.forceBlur()
+    //   var keysToCheck = ['name', 'asin', 'description', 'authors']
+    //   var updatePayload = {}
+    //   // keysToCheck.forEach((key) => {
+    //   //   // 对 authors 进行深度比较
+    //   //   // if (key === 'authors') {
+    //   //   //   // 这里用 objectArrayEqual 来比较 authors 是否有变动
+    //   //   //   if (!this.objectArrayEqual(this.authorCopy.authors, this.author.authors)) {
+    //   //   //     updatePayload.authors = this.authorCopy.authors.map((v) => ({ ...v }))
+    //   //   //   }
+    //   //   // } else if (this.authorCopy[key] !== this.author[key]) {
+    //   //   //   updatePayload[key] = this.authorCopy[key]
+    //   //   // }
+    //   // })
+    //    keysToCheck.forEach((key) => {
+    //     if (this.authorCopy[key] !== this.author[key]) {
+    //       updatePayload[key] = this.authorCopy[key]
+    //     }
+    //   })
+    //   if (!Object.keys(updatePayload).length) {
+    //     this.$toast.info(this.$strings.MessageNoUpdateNecessary)
+    //     return
+    //   }
+    //   this.processing = true
+    //   var result = await this.$axios
+    //     .$patch(`/api/authors/${this.authorId}`, updatePayload)
+
+    //     .catch((error) => {
+    //       console.error('Failed', error)
+    //       const errorMsg = error.response ? error.response.data : null
+    //       this.$toast.error(errorMsg || this.$strings.ToastAuthorUpdateFailed)
+    //       return null
+    //     })
+    //   if (result) {
+    //     if (result.updated) {
+    //       this.$toast.success(this.$strings.ToastAuthorUpdateSuccess)
+    //       this.show = false
+    //     } else if (result.merged) {
+    //       this.$toast.success(this.$strings.ToastAuthorUpdateMerged)
+    //       this.show = false
+    //     } else this.$toast.info(this.$strings.MessageNoUpdatesWereNecessary)
+    //   }
+    //   this.processing = false
+    // },
     async submitForm() {
-      //TODO: check source code
-      //this.forceBlur()
-      var keysToCheck = ['name', 'asin', 'description', 'authors']
+      var keysToCheck = ['name', 'asin', 'description']
       var updatePayload = {}
       keysToCheck.forEach((key) => {
-        // 对 authors 进行深度比较
-        if (key === 'authors') {
-          // 这里用 objectArrayEqual 来比较 authors 是否有变动
-          if (!this.objectArrayEqual(this.authorCopy.authors, this.author.authors)) {
-            updatePayload.authors = this.authorCopy.authors.map((v) => ({ ...v }))
-          }
-        } else if (this.authorCopy[key] !== this.author[key]) {
+        if (this.authorCopy[key] !== this.author[key]) {
           updatePayload[key] = this.authorCopy[key]
         }
       })
@@ -285,15 +324,12 @@ export default {
         return
       }
       this.processing = true
-      var result = await this.$axios
-        .$patch(`/api/authors/${this.authorId}`, updatePayload)
-
-        .catch((error) => {
-          console.error('Failed', error)
-          const errorMsg = error.response ? error.response.data : null
-          this.$toast.error(errorMsg || this.$strings.ToastAuthorUpdateFailed)
-          return null
-        })
+      var result = await this.$axios.$patch(`/api/authors/${this.authorId}`, updatePayload).catch((error) => {
+        console.error('Failed', error)
+        const errorMsg = error.response ? error.response.data : null
+        this.$toast.error(errorMsg || this.$strings.ToastAuthorUpdateFailed)
+        return null
+      })
       if (result) {
         if (result.updated) {
           this.$toast.success(this.$strings.ToastAuthorUpdateSuccess)
@@ -392,8 +428,8 @@ export default {
         await this.$axios.$delete(`/api/authors/${this.authorId}/alias`, { data: author }).catch((error) => {
           console.error('Failed to unlink alias relation', error)
         })
-        this.authorCopy.aliases = this.authorCopy.aliases.filter(alias => alias.id !== author.id)
-        this.authorCopy.originalAuthor = this.authorCopy.originalAuthor.filter(original => original.id !== author.id)
+        this.authorCopy.aliases = this.authorCopy.aliases.filter((alias) => alias.id !== author.id)
+        this.authorCopy.originalAuthor = this.authorCopy.originalAuthor.filter((original) => original.id !== author.id)
         this.$toast.success('Successfully unlink alias')
       } catch (error) {
         console.error('Failed to remove alias', error)
