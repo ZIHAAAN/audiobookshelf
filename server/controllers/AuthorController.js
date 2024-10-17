@@ -514,6 +514,80 @@ class AuthorController {
   }
 
   /**
+   * POST: api/authors/:id/make_alias
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
+  async makeAlias(req, res) {
+    try {
+      const originId = req.params.id
+      const { aliasId } = req.body
+      if (!aliasId) {
+        return res.status(400).send('Missing request body')
+      }
+
+      const originalAuthor = await Database.authorModel.findByPk(originId)
+      const alias = await Database.authorModel.findByPk(aliasId)
+      if (!originalAuthor || !alias) {
+        return res.status(404).send('Author not found')
+      }
+
+      if (originalAuthor.is_alias_of !== null) {
+        return res.status(409).send(`${originalAuthor.name} is an alias of other author.`)
+      }
+
+      if (alias.is_alias_of === null) {
+        const result = await Database.authorCombinedAliasModel.findAll({
+          where: {
+            authorId: alias.id
+          }
+        })
+        const result2 = await Database.authorModel.findAll({
+          where: {
+            is_alias_of: alias.id
+          }
+        })
+
+        if (result.length > 0 || result2.length > 0) {
+          return res.status(409).send(`${alias.name} has alias.`)
+        } else {
+          await alias.update({is_alias_of: originId})
+          return res.status(200).send('Success')
+        }
+      }
+
+      else if (alias.is_alias_of === 0) {
+        await Database.authorCombinedAliasModel.create({
+          authorId: originId,
+          aliasId: aliasId,
+          createdAt: new Date()
+        })
+        return res.status(200).send('Success')
+      }
+
+      else {
+        await Database.authorCombinedAliasModel.create({
+          authorId: alias.is_alias_of,
+          aliasId: aliasId,
+          createdAt: new Date()
+        })
+        await alias.update({is_alias_of: 0})
+        await Database.authorCombinedAliasModel.create({
+          authorId: originId,
+          aliasId: aliasId,
+          createdAt: new Date()
+        })
+        return res.status(200).send('Success')
+      }
+
+    } catch (error) {
+      return res.status(500).send('Internal Server Error')
+    }
+  }
+
+
+  /**
    * POST: api/authors/:id/combined_alias
    *
    * @param {import('express').Request} req
@@ -532,6 +606,10 @@ class AuthorController {
         return res.status(400).json({ error: 'Missing request body' })
       }
 
+      if (author.is_alias_of == null && originalAuthors.length <= 1) {
+        await author.update({is_alias_of: originalAuthors[0]})
+      }
+
       if (author.is_alias_of !== 0 && author.is_alias_of !== null) {
         await Database.authorCombinedAliasModel.create({
           authorId: author.is_alias_of,
@@ -539,6 +617,7 @@ class AuthorController {
         })
         await author.update({is_alias_of: 0})
       }
+
 
       for (let i = 0; i < originalAuthors.length; i++) {
         let originalAuthorId = originalAuthors[i]
@@ -553,6 +632,8 @@ class AuthorController {
           aliasId: authorId,
           createdAt: new Date()
         })
+
+        await author.update({is_alias_of: 0})
       }
       return res.status(200).json({ message: 'Successfully add original author' })
     } catch (error) {
@@ -760,6 +841,7 @@ class AuthorController {
       res.status(500).send('Internal Server Error')
     }
   }
+
 
   async middleware(req, res, next) {
     const author = await Database.authorModel.getOldById(req.params.id)

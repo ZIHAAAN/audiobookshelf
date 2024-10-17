@@ -2,24 +2,15 @@
   <div class="page" :class="streamLibraryItem ? 'streaming' : ''">
     <app-book-shelf-toolbar page="authors" is-home :authors="authors" />
 
-    <!--  <div class="flex flex-wrap justify-center">
-         <div v-if="selectedAuthors.length > 0" class="select-bar w-full p-2 text-white flex justify-between items-center">
-          <span>{{ selectedAuthors.length }} Authors Selected</span>
-          <div>
-            <ui-btn type="button" :class="mergeButtonClass" @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
-            <ui-btn type="button" :class="makeAliasButtonClass" @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
-          </div>-->
     <div v-if="selectedAuthors.length > 0" class="toolbar fixed top-0 right-0 w-full bg-gray-900 text-white flex justify-end items-center px-4 py-2 z-50 shadow-lg rounded">
       <span class="mr-auto">{{ selectedAuthors.length }} Authors Selected</span>
-      <ui-btn  @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
-      <ui-btn @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
-      <ui-btn class="btn-delete" @click="deleteAuthors">Delete</ui-btn>
+      <ui-btn class="btn-edit" @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
+      <ui-btn class="btn-edit" @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
+      <ui-btn class="btn-delete" @click="deleteAuthors">Remove</ui-btn>
     </div>
+
     <div id="bookshelf" class="w-full h-full p-8e overflow-y-auto" :style="{ fontSize: sizeMultiplier + 'rem' }">
-      <!-- Cover size widget -->
-
       <widgets-cover-size-widget class="fixed right-4 z-50" :style="{ bottom: streamLibraryItem ? '181px' : '16px' }" />
-
       <div class="flex flex-wrap justify-center">
         <template v-for="author in authorsSorted">
 
@@ -275,7 +266,6 @@ export default {
   position: relative;
 }
 
-/* 使用伪元素添加蒙版 */
 .highlight-border::before {
   content: '';
   position: absolute;
