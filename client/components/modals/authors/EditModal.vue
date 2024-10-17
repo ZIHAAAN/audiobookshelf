@@ -92,7 +92,7 @@
       </div>
     </div>
     <CombineAliasModal v-if="!isLoading && showCombineModal" v-model="showCombineModal" :author="authorCopy" />
-    <AddAliasModal v-if="!isLoading && showAddAliasModal" v-model="showAddAliasModal" :author="authorCopy" />
+    <AddAliasModal v-if="!isLoading && showAddAliasModal" v-model="showAddAliasModal" :author="authorCopy" @update-aliases="updateAliases" />
   </modals-modal>
 </template>
 
@@ -104,7 +104,7 @@ import AddAliasModal from '@/components/modals/authors/AddAliasModal.vue'
 export default {
   components: {
     AddAliasModal,
-    CombineAliasModal,
+    CombineAliasModal
   },
   data() {
     return {
@@ -173,6 +173,9 @@ export default {
   methods: {
     toggleAliasDropdown() {
       this.showAliasDropdown = !this.showAliasDropdown
+    },
+    updateAliases(updatedAliases) {
+      this.authorCopy.aliases = updatedAliases
     },
     async checkAuthorStatus() {
       if (this.author.is_alias_of === null) {
