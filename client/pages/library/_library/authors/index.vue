@@ -4,7 +4,7 @@
 
     <div v-if="selectedAuthors.length > 0" class="toolbar fixed top-0 right-0 w-full bg-gray-900 text-white flex justify-end items-center px-4 py-2 z-50 shadow-lg rounded">
       <span class="mr-auto">{{ selectedAuthors.length }} Authors Selected</span>
-      <ui-btn class="btn-edit" @click="openMergeModal" :disabled="selectedAuthors.length !== 2">Merge</ui-btn>
+      <ui-btn class="btn-edit" @click="openMergeModal" :disabled="!isMergeAvailable">Merge</ui-btn>
       <ui-btn class="btn-edit" @click="openMakeAliasModal" :disabled="selectedAuthors.length !== 2">Make Alias</ui-btn>
       <ui-btn class="btn-delete" @click="deleteAuthors">Remove</ui-btn>
     </div>
@@ -64,7 +64,8 @@ export default {
       selectedAuthors: [],
       isMergeModalVisible: false,
       isMakeAliasModalVisible: false,
-      isSelectionMode: false
+      isSelectionMode: false,
+      isMergeAvailable: false
     }
   },
   computed: {
@@ -94,7 +95,7 @@ export default {
         const bVal = b[sortProp] || ''
         return aVal.localeCompare(bVal, undefined, { sensitivity: 'base' }) * bDesc
       })
-    }
+    },
   },
   methods: {
     async init() {
@@ -136,16 +137,32 @@ export default {
       console.log('author id:' + author.id + ' Select state:' + isSelected)
       if (isSelected) {
         if (!this.selectedAuthors.some((selectedAuthor) => selectedAuthor.id === author.id)) {
-          const alias = await this.fetchAuthorAlias(author.id)
-          author.alias = alias || []
-
           this.selectedAuthors.push(author)
         }
       } else {
         this.selectedAuthors = this.selectedAuthors.filter((selectedAuthor) => selectedAuthor.id !== author.id)
       }
-      console.log(this.selectedAuthors)
       this.isSelectionMode = this.selectedAuthors.length > 0
+      console.log('Selected number:' , this.selectedAuthors.length)
+
+      if (this.selectedAuthors.length === 2) {
+        const author1 = this.selectedAuthors[0];
+        const author2 = this.selectedAuthors[1];
+
+        if (author1.is_alias_of === null && author2.is_alias_of === null) {
+          const alias1 = await this.fetchAuthorAlias(author1.id);
+          const alias2 = await this.fetchAuthorAlias(author2.id);
+          if (alias1.length === 0 && alias2.length === 0) {
+            this.isMergeAvailable = true;
+          } else {
+            this.isMergeAvailable = false;
+          }
+        } else {
+          this.isMergeAvailable = false;
+        }
+      } else {
+        this.isMergeAvailable = false;
+      }
 
       this.$nextTick(() => {
         const authorCardContainer = document.querySelector(`.author-card-container[data-author-id="${author.id}"]`)
@@ -160,14 +177,29 @@ export default {
       })
     },
     async fetchAuthorAlias(authorId) {
+      let aliases = []
       try {
-        const token = this.$store.getters['user/getToken']
-        const response = await this.$axios.get(`/api/authors/${authorId}/alias`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        return response.data
+        const aliasResponse = await this.$axios.get(`/api/authors/${authorId}/alias`);
+        const combinedAliasResponse = await this.$axios.get(`/api/authors/${authorId}/combined_alias`);
+        const alias = aliasResponse.data;
+        const combinedAlias = combinedAliasResponse.data;
+
+        aliases.push(...alias);
+        aliases.push(...combinedAlias);
+
+        return aliases
+      } catch (error) {
+        return []
+      }
+    },
+    async fetchOriginalAuthors(authorId) {
+      let originalAuthors = []
+      try {
+        const origin = await this.$axios.get(`/api/authors/${authorId}/origin`)
+        const origins = await this.$axios.get(`/api/authors/${authorId}/origins`)
+        originalAuthors.push(...origin)
+        originalAuthors.push(...origins)
+        return originalAuthors
       } catch (error) {
         return []
       }
@@ -219,21 +251,12 @@ export default {
 </script>
 
 <style scoped>
-.btn-primary {
-  background-color: #809f52;
-  color: #ffffff;
-}
-
-.btn-disabled {
-  background-color: #838383;
-  color: #ffffff;
-}
 .toolbar {
-  background-color: #1e1e1e; /* 与 Library 页面的工具栏样式一致 */
+  background-color: #1e1e1e;
   height: auto;
   padding: 12px 24px;
   border-radius: 8px;
-  z-index: 100; /* 确保层级足够高 */
+  z-index: 100;
   position: relative;
 }
 

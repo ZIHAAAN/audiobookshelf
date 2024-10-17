@@ -26,15 +26,6 @@
               <span>Description: {{ authorA.description }}</span>
               <input type="radio" class="option-input" name="description" v-model="selectedDescription" value="A" @change="updateMergedAuthorDescription('A')" />
             </label>
-            <span>Alias(Multiple options): </span>
-            <ul class="alias-tags" v-for="(alias, index) in authorA.alias" :key="index">
-              <li>
-                <label>
-                  <input type="checkbox" :name="'aliasA' + index" v-model="selectedAliasA[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('A', index)" />
-                  <div class="alias-tag">{{ alias.name }}</div>
-                </label>
-              </li>
-            </ul>
           </div>
         </div>
 
@@ -48,11 +39,6 @@
               <p id="author-info-name"><strong>Name:</strong> {{ mergedAuthor.name }}</p>
               <p><strong>ASIN:</strong> {{ mergedAuthor.asin }}</p>
               <p><strong>Description:</strong> {{ mergedAuthor.description }}</p>
-              <p><strong>Alias:</strong> {{ mergedAuthor.alias.join(', ') }}</p>
-
-              <!-- Category-based rendering -->
-              <!-- <p v-if="metadata.category === 'merge'"><strong>Alias:</strong> {{ mergedAuthor.alias.join(', ') }}</p>
-              <p v-else-if="metadata.category === 'Possible Author'"><strong>Possible Author:</strong> {{ mergedAuthor.possibleAuthors.join(', ') }}</p> -->
             </div>
           </div>
         </div>
@@ -77,15 +63,6 @@
               <input type="radio" class="option-input" name="description" v-model="selectedDescription" value="B" @change="updateMergedAuthorDescription('B')" />
               <span>Description: {{ authorB.description }}</span>
             </label>
-            <span>Alias(Multiple options): </span>
-            <ul class="alias-tags" v-for="(alias, index) in authorB.alias" :key="index">
-              <li>
-                <label>
-                  <input type="checkbox" :name="'aliasB' + index" v-model="selectedAliasB[index]" :value="alias.name || alias" @change="updateMergedAuthorAlias('B', index)" />
-                  <div class="alias-tag">{{ alias.name }}</div>
-                </label>
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -114,17 +91,13 @@ export default {
       type: Object,
       required: true
     },
-    // metadata: {
-    //   type: Object,
-    //   required: true
-    // }
     isPossibleAuthor: {
       type: Boolean,
       required: true
     },
     notificationId: {
       type: String,
-      required: false // 不是必须的
+      required: false
     },
     shouldClearNotification: {
       type: Boolean,
@@ -150,21 +123,7 @@ export default {
       defaultImage: '/path/to/default-image.png'
     }
   },
-  computed: {
-    userToken() {
-      return this.$store.getters['user/getToken']
-    }
-  },
-  mounted() {
-    //this.setDefaultAuthor()
-    // this.swapAuthorIds()
-  },
   methods: {
-    // swapAuthorIds() {
-    //   const tempId = this.authorA.id
-    //   this.authorA.id = this.authorB.id
-    //   this.authorB.id = tempId
-    // },
     updateMergedAuthorName(author) {
       if (author === 'A') {
         this.mergedAuthor.name = this.authorA.name
@@ -183,85 +142,26 @@ export default {
     updateMergedAuthorDescription(author) {
       this.mergedAuthor.description = author === 'A' ? this.authorA.description : this.authorB.description
     },
-    updateMergedAuthorAlias(author, index) {
-      console.log('Checkbox clicked:', author, index)
-      let alias
-      if (author === 'A') {
-        alias = this.authorA.alias[index].name || this.authorA.alias[index]
-        if (this.selectedAliasA[index]) {
-          this.$set(this.selectedAliasA, index, alias) // 勾选时添加别名
-        } else {
-          this.$delete(this.selectedAliasA, index) // 取消勾选时移除别名
-        }
-      } else {
-        alias = this.authorB.alias[index].name || this.authorB.alias[index]
-        if (this.selectedAliasB[index]) {
-          this.$set(this.selectedAliasB, index, alias) // 勾选时添加别名
-        } else {
-          this.$delete(this.selectedAliasB, index) // 取消勾选时移除别名
-        }
-      }
-
-      // 合并两个别名列表，并移除空值
-      this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])].filter(Boolean)
-      // if (author === 'A') {
-      //   this.$set(this.selectedAliasA, index, this.authorA.alias[index].name || this.authorA.alias[index])
-      // } else {
-      //   this.$set(this.selectedAliasB, index, this.authorB.alias[index].name || this.authorB.alias[index])
-      // }
-      // this.mergedAuthor.alias = [...new Set([...Object.values(this.selectedAliasA), ...Object.values(this.selectedAliasB)])]
-    },
     async mergeAuthors() {
-      // const metadata = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : {}
-      // console.log('Notification ID:', metadata.notificationId)
-
-      // console.log('Notification ID before clearing:', metadata.notificationId)
-      // if (!metadata.notificationId) {
-      //   console.error('Notification ID is missing, cannot proceed with merge')
-      //   return
-      // }
       try {
-        const token = this.userToken
-        console.log('this.userToken', this.userToken)
-        const headers = {
-          Authorization: `Bearer ${token}`
-        }
-
         let payload = {
           id: this.mergedAuthor.id,
           name: this.mergedAuthor.name,
           asin: this.mergedAuthor.asin,
           description: this.mergedAuthor.description,
-          alias: [...new Set([...(this.authorA.alias || []), ...(this.authorB.alias || [])])].filter(Boolean),
           is_alias_of: null
         }
-
-        console.log('----payload-----:', payload)
-        console.log('Target Author ID for merge:', this.mergedAuthor.name)
-        const response = await this.$axios.patch(`/api/authors/${this.mergedAuthor.id}`, payload, { headers })
-        console.log('Merge successful:', response.data)
-
+        const response = await this.$axios.patch(`/api/authors/${this.mergedAuthor.id}`, payload)
         this.$toast.success('Authors merged successfully')
 
-        //await this.clearNotifications(metadata.notificationId)
-        // if (this.shouldClearNotification && this.notificationId) {
-        //   console.log('Clearing notification ID:', this.notificationId)
-        //   await this.clearNotifications(this.notificationId)
-        // }
         this.$emit('merge', this.notificationId)
-        // this.$emit('merge', metadata)
         this.close()
       } catch (error) {
         this.$toast.error('Failed to merge authors')
         console.error('Merge error:', error)
       }
     },
-
     close() {
-      // if (this.selectedAuthorPair && this.selectedAuthorPair.metadata && this.selectedAuthorPair.metadata.notificationId) {
-      //   const notificationId = this.selectedAuthorPair.metadata.notificationId
-      //   this.clearNotifications(notificationId)
-      // }
       this.isMergeModalVisible = false
       this.selectedAuthorPair = null
       this.$emit('close')
