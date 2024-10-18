@@ -91,7 +91,7 @@
         </div>
       </div>
     </div>
-    <CombineAliasModal v-if="!isLoading && showCombineModal" v-model="showCombineModal" :author="authorCopy" />
+    <CombineAliasModal v-if="!isLoading && showCombineModal" v-model="showCombineModal" :author="authorCopy" @update-authors="handleUpdatedAuthors" />
     <AddAliasModal v-if="!isLoading && showAddAliasModal" v-model="showAddAliasModal" :author="authorCopy" @update-aliases="updateAliases" />
   </modals-modal>
 </template>
@@ -176,6 +176,15 @@ export default {
     },
     updateAliases(updatedAliases) {
       this.authorCopy.aliases = updatedAliases
+    },
+    handleUpdatedAuthors(updateOrginalAuthor) {
+      // 处理接收到的 authorIds，例如更新父组件的数据或调用 API
+      // this.authorCopy.originalAuthor = updateOrginalAuthor
+      this.authorCopy = {
+        ...this.authorCopy,
+        originalAuthor: updateOrginalAuthor
+      }
+      console.log('Updated author list from child:', updateOrginalAuthor)
     },
     async checkAuthorStatus() {
       if (this.author.is_alias_of === null) {
