@@ -606,34 +606,33 @@ class AuthorController {
         return res.status(400).json({ error: 'Missing request body' })
       }
 
-      if (author.is_alias_of == null && originalAuthors.length <= 1) {
+      if (author.is_alias_of == null && originalAuthors.length === 1) {
         await author.update({is_alias_of: originalAuthors[0]})
       }
 
-      if (author.is_alias_of !== 0 && author.is_alias_of !== null) {
-        await Database.authorCombinedAliasModel.create({
-          authorId: author.is_alias_of,
-          aliasId: author.id
-        })
-        await author.update({is_alias_of: 0})
-      }
-
-
-      for (let i = 0; i < originalAuthors.length; i++) {
-        let originalAuthorId = originalAuthors[i]
-        let originalAuthor = await Database.authorModel.findByPk(originalAuthorId)
-
-        if (originalAuthors.is_alias_of) {
-          return res.status(409).json({ message: `${originalAuthor.name} is an alias of other author.` })
+      if(author.is_alias_of !== null && originalAuthors.length > 1) {
+        if (author.is_alias_of !== 0) {
+          await Database.authorCombinedAliasModel.create({
+            authorId: author.is_alias_of,
+            aliasId: author.id
+          })
+          await author.update({is_alias_of: 0})
         }
 
-        await Database.authorCombinedAliasModel.create({
-          authorId: originalAuthorId,
-          aliasId: authorId,
-          createdAt: new Date()
-        })
+        for (let i = 0; i < originalAuthors.length; i++) {
+          let originalAuthorId = originalAuthors[i]
+          let originalAuthor = await Database.authorModel.findByPk(originalAuthorId)
 
-        await author.update({is_alias_of: 0})
+          if (originalAuthors.is_alias_of) {
+            return res.status(409).json({ message: `${originalAuthor.name} is an alias of other author.` })
+          }
+
+          await Database.authorCombinedAliasModel.create({
+            authorId: originalAuthorId,
+            aliasId: authorId,
+            createdAt: new Date()
+          })
+        }
       }
       return res.status(200).json({ message: 'Successfully add original author' })
     } catch (error) {
