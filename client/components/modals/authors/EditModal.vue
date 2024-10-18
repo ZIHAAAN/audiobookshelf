@@ -175,7 +175,13 @@ export default {
       this.showAliasDropdown = !this.showAliasDropdown
     },
     updateAliases(updatedAliases) {
-      this.authorCopy.aliases = updatedAliases
+      //  this.authorCopy.aliases = updatedAliases
+      this.authorCopy = {
+        ...this.authorCopy,
+        aliases: updatedAliases
+      }
+      // 重新检查作者状态
+      this.checkAuthorStatus()
     },
     handleUpdatedAuthors(updateOrginalAuthor) {
       // 处理接收到的 authorIds，例如更新父组件的数据或调用 API
@@ -184,15 +190,45 @@ export default {
         ...this.authorCopy,
         originalAuthor: updateOrginalAuthor
       }
+      this.checkAuthorStatus()
       console.log('Updated author list from child:', updateOrginalAuthor)
     },
+    // async checkAuthorStatus() {
+    //   if (this.author.is_alias_of === null) {
+    //     await this.checkIfOriginalAuthor()
+    //   } else if (this.author.is_alias_of === 0) {
+    //     this.currentAuthorStatus = 'Combined Alias'
+    //     await this.fetchOriginalAuthors()
+    //   } else {
+    //     this.currentAuthorStatus = 'Alias'
+    //     await this.fetchOriginAuthor()
+    //   }
+    // },
     async checkAuthorStatus() {
-      if (this.author.is_alias_of === null) {
-        await this.checkIfOriginalAuthor()
-      } else if (this.author.is_alias_of === 0) {
+      // 如果作者没有被标记为 alias，根据最新的 aliases 和 original authors 数据来判断
+      if (this.authorCopy.is_alias_of === null) {
+        // 检查最新的 aliases 和 combined aliases 来判断是否为 Original Author
+        const hasAliases = this.authorCopy.aliases && this.authorCopy.aliases.length > 0
+        const hasOriginalAuthors = this.authorCopy.originalAuthor && this.authorCopy.originalAuthor.length > 0
+
+        if (hasAliases) {
+          this.currentAuthorStatus = 'Original Author'
+        } else if (hasOriginalAuthors) {
+          this.currentAuthorStatus = 'Combined Alias'
+        } else {
+          this.currentAuthorStatus = 'Unknown'
+        }
+
+        // 继续检查详细信息
+        if (!hasAliases && !hasOriginalAuthors) {
+          await this.checkIfOriginalAuthor()
+        }
+      } else if (this.authorCopy.is_alias_of === 0) {
+        // 如果 `is_alias_of` 为 0，表示是一个组合 alias
         this.currentAuthorStatus = 'Combined Alias'
         await this.fetchOriginalAuthors()
       } else {
+        // 如果 `is_alias_of` 为非 0 值，表示是一个单独的 alias
         this.currentAuthorStatus = 'Alias'
         await this.fetchOriginAuthor()
       }
@@ -442,6 +478,11 @@ export default {
         })
         this.authorCopy.aliases = this.authorCopy.aliases.filter((alias) => alias.id !== author.id)
         this.authorCopy.originalAuthor = this.authorCopy.originalAuthor.filter((original) => original.id !== author.id)
+
+        if (this.authorCopy.aliases.length === 0 && this.authorCopy.originalAuthor.length === 0) {
+          this.currentAuthorStatus = 'Unknown'
+        }
+
         this.$toast.success('Successfully unlink alias')
       } catch (error) {
         console.error('Failed to remove alias', error)
