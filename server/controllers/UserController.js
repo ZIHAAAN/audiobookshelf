@@ -89,7 +89,6 @@ class UserController {
   }
 
   async create(req, res) {
-    token
     const account = req.body
     const username = account.username
 

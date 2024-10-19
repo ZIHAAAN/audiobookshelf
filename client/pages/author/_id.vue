@@ -18,6 +18,7 @@
 
           <!-- Alias or Original Author Section -->
           <div v-if="author.is_alias_of !== null && author.is_alias_of != 0" class="mb-4">
+            <p class="text-white text-opacity-60 text-xs mb-2">{{ author.name }} is an alias of another author</p>
             <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Author</p>
             <nuxt-link :to="`/author/${author.is_alias_of}`" class="alias-box inline-block p-2 rounded mb-2 text-white">
               {{ author.originalAuthor.name }}
@@ -34,9 +35,10 @@
               </nuxt-link>
             </div>
           </div>
+
           <div v-else-if="author.is_alias_of === 0" class="mb-4">
-            <p class="text-white text-opacity-60 text-xs mb-2">Author {{ author.name }} is a combined auther</p>
-            <p class="text-white text-opacity-60 text-xs mb-2">The following authors use this alias write these books.</p>
+            <p class="text-white text-opacity-60 text-xs mb-2">{{ author.name }} is a combined alias shared by other authors</p>
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Origin Authors</p>
             <div v-for="originalAuthor in author.combinedOriginalAuthor" :key="originalAuthor.id">
               <nuxt-link :to="`/author/${originalAuthor.id}`">
                 <div class="inline-block alias-box p-2 rounded mb-2 text-white">
@@ -45,8 +47,10 @@
               </nuxt-link>
             </div>
           </div>
+
           <div v-if="author.combinedAlias.length !== 0" class="mb-4">
-            <p class="text-white text-opacity-60 text-xs mb-2">Author {{ author.name }} has following combined alias</p>
+            <p class="text-white text-opacity-60 uppercase text-xs mb-2">Combined Aliases</p>
+            <p class="text-white text-opacity-60 text-xs mb-2">The alias below is shared with other authors</p>
             <div v-for="combinedAlias in author.combinedAlias" :key="combinedAlias.id">
               <nuxt-link :to="`/author/${combinedAlias.id}`">
                 <div class="inline-block alias-box p-2 rounded mb-2 text-white">
@@ -112,7 +116,6 @@ export default {
       console.error('Failed to get combined alias', error)
       return null
     })
-    //console.log('combinedAlias----------------------', combinedAlias)
 
     if (!author) {
       return redirect(`/library/${store.state.libraries.currentLibraryId}/authors`)
