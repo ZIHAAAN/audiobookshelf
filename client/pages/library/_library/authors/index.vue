@@ -12,15 +12,14 @@
     <div id="bookshelf" class="w-full h-full p-8e overflow-y-auto" :style="{ fontSize: sizeMultiplier + 'rem' }">
       <widgets-cover-size-widget class="fixed right-4 z-50" :style="{ bottom: streamLibraryItem ? '181px' : '16px' }" />
       <div class="flex flex-wrap justify-center">
-        <template v-for="author in authorsSorted">
+        <!-- <template  > -->
 
-          <div :key="author.id" class="author-card-container p-3e relative" :class="{ 'highlight-border': selectedAuthors.includes(author.id) }" :data-author-id="author.id">
+        <div v-for="author in authorsSorted" :key="author.id" class="author-card-container p-3e relative" :class="{ 'highlight-border': selectedAuthors.includes(author.id) }" :data-author-id="author.id">
+          <div v-if="selectedAuthors.includes(author.id)" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 pointer-events-none"></div>
 
-            <div v-if="selectedAuthors.includes(author.id)" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-20 pointer-events-none" />
-
-            <cards-author-card :author="author" @edit="editAuthor" @select="handleSelect" />
-          </div>
-        </template>
+          <cards-author-card :author="author" @edit="editAuthor" @select="handleSelect" />
+        </div>
+        <!-- </template> -->
       </div>
     </div>
 
@@ -95,7 +94,7 @@ export default {
         const bVal = b[sortProp] || ''
         return aVal.localeCompare(bVal, undefined, { sensitivity: 'base' }) * bDesc
       })
-    },
+    }
   },
   methods: {
     async init() {
@@ -143,25 +142,25 @@ export default {
         this.selectedAuthors = this.selectedAuthors.filter((selectedAuthor) => selectedAuthor.id !== author.id)
       }
       this.isSelectionMode = this.selectedAuthors.length > 0
-      console.log('Selected number:' , this.selectedAuthors.length)
+      console.log('Selected number:', this.selectedAuthors.length)
 
       if (this.selectedAuthors.length === 2) {
-        const author1 = this.selectedAuthors[0];
-        const author2 = this.selectedAuthors[1];
+        const author1 = this.selectedAuthors[0]
+        const author2 = this.selectedAuthors[1]
 
         if (author1.is_alias_of === null && author2.is_alias_of === null) {
-          const alias1 = await this.fetchAuthorAlias(author1.id);
-          const alias2 = await this.fetchAuthorAlias(author2.id);
+          const alias1 = await this.fetchAuthorAlias(author1.id)
+          const alias2 = await this.fetchAuthorAlias(author2.id)
           if (alias1.length === 0 && alias2.length === 0) {
-            this.isMergeAvailable = true;
+            this.isMergeAvailable = true
           } else {
-            this.isMergeAvailable = false;
+            this.isMergeAvailable = false
           }
         } else {
-          this.isMergeAvailable = false;
+          this.isMergeAvailable = false
         }
       } else {
-        this.isMergeAvailable = false;
+        this.isMergeAvailable = false
       }
 
       this.$nextTick(() => {
@@ -179,13 +178,13 @@ export default {
     async fetchAuthorAlias(authorId) {
       let aliases = []
       try {
-        const aliasResponse = await this.$axios.get(`/api/authors/${authorId}/alias`);
-        const combinedAliasResponse = await this.$axios.get(`/api/authors/${authorId}/combined_alias`);
-        const alias = aliasResponse.data;
-        const combinedAlias = combinedAliasResponse.data;
+        const aliasResponse = await this.$axios.get(`/api/authors/${authorId}/alias`)
+        const combinedAliasResponse = await this.$axios.get(`/api/authors/${authorId}/combined_alias`)
+        const alias = aliasResponse.data
+        const combinedAlias = combinedAliasResponse.data
 
-        aliases.push(...alias);
-        aliases.push(...combinedAlias);
+        aliases.push(...alias)
+        aliases.push(...combinedAlias)
 
         return aliases
       } catch (error) {
@@ -222,17 +221,17 @@ export default {
       this.isMakeAliasModalVisible = false
     },
     async deleteAuthors() {
-      const authorIds = this.selectedAuthors.map(author => author.id);
+      const authorIds = this.selectedAuthors.map((author) => author.id)
 
       try {
         await this.$axios.delete(`/api/authors/${authorIds[0]}`, {
           data: { ids: authorIds }
-        });
+        })
 
-        this.$toast.success('Authors deleted successfully');
+        this.$toast.success('Authors deleted successfully')
       } catch (error) {
-        console.error('Failed to delete authors:', error);
-        this.$toast.error('Failed to delete authors');
+        console.error('Failed to delete authors:', error)
+        this.$toast.error('Failed to delete authors')
       }
     }
   },

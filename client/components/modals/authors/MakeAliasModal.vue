@@ -56,26 +56,42 @@ export default {
     authorB: {
       type: Object,
       required: true
+    },
+    notificationId: {
+      type: String,
+      required: false
+    },
+    shouldClearNotification: {
+      type: Boolean,
+      required: false,
+      default: false
     }
   },
   methods: {
     async makeAlias(direction) {
-
       const originalAuthor = direction === 'AtoB' ? this.authorA : this.authorB
       const alias = direction === 'AtoB' ? this.authorB : this.authorA
 
-      try{
-        const response = await this.$axios.$post(`/api/authors/${originalAuthor.id}/make_alias`, {aliasId: alias.id})
+      try {
+        const response = await this.$axios.$post(`/api/authors/${originalAuthor.id}/make_alias`, { aliasId: alias.id })
         this.$toast.success(`Success`)
+        if (this.shouldClearNotification) {
+          const notificationId = this.notificationId
+          await this.$axios.get('/api/clearNotifications', {
+            params: { notificationId }
+          })
+        }
+
+        this.$emit('alias', this.notificationId)
       } catch (error) {
         if (error.response) {
           if (error.response.status === 409) {
-            const data = error.response.data;
-            this.$toast.error('Failed: ' + data);
+            const data = error.response.data
+            this.$toast.error('Failed: ' + data)
           }
         } else {
-          console.error('Error making alias:', error);
-          this.$toast.error('Failed to make alias');
+          console.error('Error making alias:', error)
+          this.$toast.error('Failed to make alias')
         }
       }
       this.close()

@@ -143,6 +143,7 @@ export default {
       this.mergedAuthor.description = author === 'A' ? this.authorA.description : this.authorB.description
     },
     async mergeAuthors() {
+      console.log(this.shouldClearNotification)
       try {
         let payload = {
           id: this.mergedAuthor.id,
@@ -153,6 +154,13 @@ export default {
         }
         const response = await this.$axios.patch(`/api/authors/${this.mergedAuthor.id}`, payload)
         this.$toast.success('Authors merged successfully')
+        //Clear Notification
+        if (this.shouldClearNotification) {
+          const notificationId = this.notificationId
+          await this.$axios.get('/api/clearNotifications', {
+            params: { notificationId }
+          })
+        }
 
         this.$emit('merge', this.notificationId)
         this.close()

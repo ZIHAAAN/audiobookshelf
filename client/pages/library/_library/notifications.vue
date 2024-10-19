@@ -22,7 +22,7 @@
       </div>
     </div>
     <merge-author-modal v-if="isMergeModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :isPossibleAuthor="isPossibleAuthor" :notificationId="selectedAuthorPair.metadata.notificationId" :shouldClearNotification="true" @close="closeMergeModal" @merge="handleMerge" />
-    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
+    <make-alias-modal v-if="isMakeAliasModalVisible" :authorA="selectedAuthorPair.authorA" :authorB="selectedAuthorPair.authorB" :notificationId="selectedAuthorPair.metadata.notificationId" :shouldClearNotification="true" @close="closeMakeAliasModal" @alias="handleMakeAlias" />
   </div>
 </template>
 
@@ -290,7 +290,7 @@ export default {
       this.selectedAuthorPair = null
     },
 
-    async handleMerge() {
+    async handleMerge(notificationId) {
       this.selectedAuthorPair.metadata.handled = true
       if (notificationId) {
         this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== notificationId)
@@ -299,7 +299,7 @@ export default {
       this.isMergeModalVisible = false
     },
 
-    async handleMakeAlias() {
+    async handleMakeAlias(notificationId) {
       this.selectedAuthorPair.metadata.handled = true
       if (notificationId) {
         this.authorPairs = this.authorPairs.filter((pair) => pair.metadata.notificationId !== notificationId)
