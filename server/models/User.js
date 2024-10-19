@@ -183,7 +183,6 @@ class User extends Model {
       pash,
       token,
       isActive: true,
-      //notifications: [],
       createdAt: Date.now()
     })
     await this.createFromOld(newRoot)
