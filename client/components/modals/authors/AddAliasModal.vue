@@ -1,8 +1,6 @@
 <template>
   <div v-if="value" class="modal" style="padding: 20px; border: 1px solid black; width: 700px; margin: auto">
-    <div v-if="author">
-      Add alias for {{author.name}}
-    </div>
+    <div v-if="author">Add alias for {{ author.name }}</div>
     <div class="p-2">
       <ui-multi-select-query-input ref="authorsSelect" v-model="authorCopy.authors" :label="$strings.LabelAuthors" filter-key="authors" />
     </div>
@@ -44,7 +42,7 @@ export default {
             authors: []
           }
           if (newVal.originalAuthor) {
-            this.authorCopy.authors.push(...newVal.aliases);
+            this.authorCopy.authors.push(...newVal.aliases)
           }
         }
       }
@@ -56,7 +54,7 @@ export default {
       filteredAuthors: [],
       authorCopy: {
         name: '',
-        authors: [],
+        authors: []
       }
     }
   },
@@ -69,9 +67,7 @@ export default {
         const selectedAuthors = this.authorCopy.authors
         const newAuthors = selectedAuthors.filter((author) => !author.id || author.id.startsWith('new'))
 
-        let authorIds = selectedAuthors
-          .filter((author) => author.id && !author.id.startsWith('new'))
-          .map((author) => author.id);
+        let authorIds = selectedAuthors.filter((author) => author.id && !author.id.startsWith('new')).map((author) => author.id)
 
         if (newAuthors.length) {
           const mediaPayload = {
@@ -84,33 +80,36 @@ export default {
           }
 
           const createdAuthors = await this.$axios.$post(`/api/authors/${this.author.id}/createNew`, mediaPayload)
-          const createdAuthorIds = createdAuthors.map((author) => author.id);
-          authorIds = [...authorIds.filter(id => !!id), ...createdAuthorIds];
+          const createdAuthorIds = createdAuthors.map((author) => author.id)
+          authorIds = [...authorIds.filter((id) => !!id), ...createdAuthorIds]
         }
 
         console.log('Final Author IDs:', authorIds)
         const response = await this.$axios.post(`/api/authors/${this.author.id}/alias`, {
           aliases: authorIds
         })
+        // 重新获取更新后的别名列表
+        const updatedAliases = await this.$axios.$get(`/api/authors/${this.author.id}/alias`)
 
+        // 触发事件，将更新后的别名列表传递给父组件
+        this.$emit('update-aliases', updatedAliases)
         this.$toast.success(`Successfully add alias to ${this.author.name}`)
       } catch (error) {
         if (error.response) {
           if (error.response.status === 409) {
-            const data = error.response.data;
-            this.$toast.error('Failed: ' + data.message);
+            const data = error.response.data
+            this.$toast.error('Failed: ' + data.message)
           }
         } else {
-          console.error('Error combining authors:', error);
-          this.$toast.error('Failed to combine authors');
+          console.error('Error combining authors:', error)
+          this.$toast.error('Failed to combine authors')
         }
       }
 
       this.$emit('input', false)
     }
   },
-  mounted() {
-  }
+  mounted() {}
 }
 </script>
 
