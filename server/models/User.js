@@ -183,6 +183,7 @@ class User extends Model {
       pash,
       token,
       isActive: true,
+      //notifications: [],
       createdAt: Date.now()
     })
     await this.createFromOld(newRoot)
@@ -369,7 +370,11 @@ class User extends Model {
           type: DataTypes.BOOLEAN,
           defaultValue: false
         },
-        notifications: DataTypes.JSON,
+        //notifications: DataTypes.JSON,
+        notifications: {
+          type: DataTypes.JSON,
+          defaultValue: []
+        },
         lastSeen: DataTypes.DATE,
         permissions: DataTypes.JSON,
         bookmarks: DataTypes.JSON,
